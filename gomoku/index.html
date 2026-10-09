@@ -390,13 +390,22 @@ const LVS=[
 ];
 const S={
   bd:new Uint8Array(SZ),
-  cur:B, mode:MODES[0], lv:LVS[2], forbid:false,
+  cur:B, mode:MODES[0], lv:LVS[0], forbid:false,
   last:-1, winCells:null, over:false, busy:false, gen:0,
 };
 const $=id=>document.getElementById(id);
 const cv=$('cv'), ctx=cv.getContext('2d');
 const myColor=()=>S.mode.id==='pve_b'?B:(S.mode.id==='pve_w'?W:0);
 const isPve=()=>S.mode.id!=='pvp';
+
+function hasProgress(){
+  if(S.over)return false;
+  for(let p=0;p<SZ;p++) if(S.bd[p]!==E) return true;
+  return false;
+}
+function askReset(){
+  return !hasProgress()||confirm('当前对局将结束，确定重新开始？');
+}
 
 function buildSeg(el,items,isOn,onPick){
   if(!el.children.length){
@@ -417,9 +426,14 @@ function buildSeg(el,items,isOn,onPick){
 function refreshSegs(){
   buildSeg($('modeSeg'),MODES,m=>m.id===S.mode.id,m=>{
     if(m.id===S.mode.id)return;
+    if(!askReset())return;
     S.mode=m;reset();
   });
-  buildSeg($('lvSeg'),LVS,l=>l.id===S.lv.id,l=>{S.lv=l;refreshSegs();});
+  buildSeg($('lvSeg'),LVS,l=>l.id===S.lv.id,l=>{
+    if(l.id===S.lv.id)return;
+    if(!askReset())return;
+    S.lv=l;reset();
+  });
   $('lvSeg').style.opacity=isPve()?'1':'.4';
   $('lvSeg').style.pointerEvents=isPve()?'':'none';
   $('btnForbid').classList.toggle('on',S.forbid);
@@ -665,7 +679,14 @@ document.addEventListener('visibilitychange',()=>{
   else if(fxActive())startFx();
 });
 
-$('btnNew').onclick=reset;
+window.addEventListener('beforeunload',e=>{
+  if(!hasProgress())return;
+  e.preventDefault();
+  e.returnValue='';
+  return '';
+});
+
+$('btnNew').onclick=()=>{ if(askReset())reset(); };
 $('btnForbid').onclick=()=>{
   S.forbid=!S.forbid;refreshSegs();
   flashMsg(S.forbid?'禁手已开启（限制黑棋）':'禁手已关闭');
