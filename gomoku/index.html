@@ -22,16 +22,15 @@ body{
   padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));
   overscroll-behavior:none; touch-action:manipulation;
 }
-.wrap{width:100%;max-width:460px;display:flex;flex-direction:column;gap:11px}
-.brand{font-size:20px;font-weight:700;letter-spacing:5px;text-align:center;margin:0}
+.wrap{width:100%;max-width:460px;display:flex;flex-direction:column;gap:9px}
 .seg{display:flex;background:var(--paper2);border:1px solid var(--line);
   border-radius:var(--radius);padding:3px;gap:3px}
 .seg button{flex:1;border:none;background:transparent;border-radius:7px;
-  padding:7px 0 6px;cursor:pointer;color:var(--ink-soft);font-family:inherit;
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  transition:background .15s,color .15s}
-.seg button span{font-size:13.5px;font-weight:600;letter-spacing:1px}
-.seg button i{font-style:normal;font-size:10px;opacity:.75}
+  padding:8px 2px;cursor:pointer;color:var(--ink-soft);font-family:inherit;
+  display:flex;align-items:baseline;justify-content:center;gap:4px;
+  white-space:nowrap;transition:background .15s,color .15s}
+.seg button span{font-size:13px;font-weight:600;letter-spacing:.5px}
+.seg button i{font-style:normal;font-size:10.5px;opacity:.7}
 .seg button.on{background:var(--ink);color:var(--paper)}
 .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -71,7 +70,6 @@ body{
 </head>
 <body>
 <div class="wrap">
-  <h1 class="brand">五子棋</h1>
   <div class="seg" id="modeSeg" role="tablist" aria-label="对局模式"></div>
   <div class="seg" id="lvSeg" role="tablist" aria-label="AI 难度"></div>
   <div class="bar">
