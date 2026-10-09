@@ -23,7 +23,6 @@ body{
   overscroll-behavior:none; touch-action:manipulation;
 }
 .wrap{width:100%;max-width:480px;display:flex;flex-direction:column;gap:13px}
-.brand{font-size:20px;font-weight:700;letter-spacing:5px;text-align:center}
 .diffs{display:flex;background:var(--paper2);border:1px solid var(--line);
   border-radius:var(--radius);padding:3px;gap:3px}
 .diffs button{flex:1;border:none;background:transparent;border-radius:7px;
@@ -82,7 +81,6 @@ body{
 </head>
 <body>
 <div class="wrap">
-  <h1 class="brand">数独</h1>
   <div class="diffs" id="diffs" role="tablist" aria-label="难度选择"></div>
   <div class="board-box"><div class="grid" id="grid" role="grid" aria-label="数独棋盘"></div></div>
   <div class="pad" id="pad" aria-label="数字键盘"></div>
