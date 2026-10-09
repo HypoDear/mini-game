@@ -1,6 +1,6 @@
 # mini-game
 
-开源小游戏合集。纯静态、零依赖、开箱即玩。
+小游戏合集。纯静态、零依赖、开箱即玩。
 
 每个游戏都是独立的单文件 HTML，不依赖任何框架或构建工具，可直接用浏览器打开，也可部署到任意静态托管。
 
@@ -25,7 +25,3 @@ https://hypodear.github.io/mini-game/
 python3 -m http.server 8000
 # 访问 http://localhost:8000
 ```
-
-## 许可
-
-[MIT License](LICENSE)
