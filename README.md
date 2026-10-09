@@ -10,6 +10,7 @@
 |------|------|----------|
 | [数独](sudoku/) | 按解题技巧分级，每局纯逻辑可解 | [开始游戏](https://hypodear.github.io/mini-game/sudoku/) |
 | [五子棋](gomoku/) | 三档 AI 对手，可开启禁手规则 | [开始游戏](https://hypodear.github.io/mini-game/gomoku/) |
+| [连连看](llk/) | 汉字牌面，卡住自动重排不会死局 | [开始游戏](https://hypodear.github.io/mini-game/llk/) |
 
 ## 在线地址
 
