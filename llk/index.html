@@ -6,6 +6,7 @@
 <meta name="description" content="连连看，汉字牌面，保证全程可解，单文件零依赖">
 <meta name="theme-color" content="#f4efe4">
 <title>连连看</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><rect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23f4efe4%27/><rect x=%274.2%27 y=%274.2%27 width=%279.6%27 height=%279.6%27 rx=%272.6%27 fill=%27%23fdfbf6%27 stroke=%27%23c9bda6%27 stroke-width=%271.4%27/><rect x=%2718.2%27 y=%2718.2%27 width=%279.6%27 height=%279.6%27 rx=%272.6%27 fill=%27%23fdfbf6%27 stroke=%27%23c9bda6%27 stroke-width=%271.4%27/><path d=%27M13.8 9v4.6a3 3 0 0 0 3 3h5%27 fill=%27none%27 stroke=%27%231f6f8b%27 stroke-width=%272.6%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/><circle cx=%279%27 cy=%279%27 r=%272.1%27 fill=%27%231f6f8b%27/><circle cx=%2723%27 cy=%2723%27 r=%272.1%27 fill=%27%231f6f8b%27/></svg>">
 <style>
 :root{
   --paper:#f4efe4; --paper2:#fbf8f1; --ink:#2f2a24; --ink-soft:#8c8275;
@@ -410,14 +411,14 @@ function layout(){
   let s=Math.min(cw,ch);
   const totalW=s*b.cols, totalH=s*b.rows;
   gridEl.style.height=totalH+'px';
-  if(s<34)s=34;
+  if(s<24)s=24;
   for(let r=1;r<=b.rows;r++)for(let c=1;c<=b.cols;c++){
     const el=S.tiles[r][c];if(!el)continue;
     el.style.width=(s-4)+'px';
     el.style.height=(s-4)+'px';
     el.style.left=((c-1)*s+2)+'px';
     el.style.top=((r-1)*s+2)+'px';
-    el.style.fontSize=Math.max(15,Math.round(s*0.60))+'px';
+    el.style.fontSize=Math.max(13,Math.min(22,Math.round(s*0.60)))+'px';
   }
   S.cell=s;
   S.out=Math.min(12,Math.max(7,s*0.2));
