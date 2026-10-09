@@ -8,7 +8,8 @@
 
 | 游戏 | 说明 | 在线试玩 |
 |------|------|----------|
-| [数独 Sudoku](sudoku/) | 按解题技巧分级难度，保证纯逻辑可解、无需猜测 | [开始游戏](https://hypodear.github.io/mini-game/sudoku/) |
+| [数独](sudoku/) | 按解题技巧分级，每局纯逻辑可解 | [开始游戏](https://hypodear.github.io/mini-game/sudoku/) |
+| [五子棋](gomoku/) | 三档 AI 对手，可开启禁手规则 | [开始游戏](https://hypodear.github.io/mini-game/gomoku/) |
 
 ## 在线地址
 
