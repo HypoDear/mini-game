@@ -33,6 +33,12 @@ body{
 .diffs button i{font-style:normal;font-size:10px;opacity:.75;letter-spacing:.5px}
 .diffs button.on{background:var(--ink);color:var(--paper)}
 .diffs button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-size:12px;color:var(--ink-soft);min-height:22px}
+.tools{display:flex;gap:6px;flex:none}
+.tools button{border:1px solid var(--line);background:var(--paper2);color:var(--ink);
+  border-radius:999px;padding:5px 11px;font:600 11.5px/1 inherit;cursor:pointer}
+.tools button:active{background:#ece3d2}
 .board-box{position:relative;width:100%;aspect-ratio:1;
   border:2.5px solid var(--line-bold);border-radius:4px;
   background:var(--paper2);overflow:hidden}
@@ -109,6 +115,10 @@ body{
 <body>
 <div class="wrap">
   <div class="diffs" id="diffs" role="tablist" aria-label="难度选择"></div>
+  <div class="bar">
+    <span></span>
+    <div class="tools"><button id="btnNew">重开</button></div>
+  </div>
   <div class="board-box"><div class="grid" id="grid" role="grid" aria-label="数独棋盘"></div></div>
   <div class="pad" id="pad" aria-label="数字键盘"></div>
 </div>
@@ -288,7 +298,8 @@ function buildDiffs(){
       b.innerHTML=`<span>${t.name}</span><i>${t.sub}</i>`;
       b.setAttribute('role','tab');
       b.onclick=()=>{
-        if(t.id!==S.tier.id||confirm('重新开始一局'+t.name+'？'))newGame(t);
+        if(t.id===S.tier.id)return;
+        if(askReset())newGame(t);
       };
       el.appendChild(b);
     });
@@ -327,6 +338,15 @@ document.addEventListener('keydown',e=>{
 });
 
 const isGiven=i=>S.puzzle[i]!==0;
+
+function hasProgress(){
+  if(S.done||!S.puzzle.length)return false;
+  for(let i=0;i<81;i++) if(!isGiven(i)&&S.values[i]) return true;
+  return false;
+}
+function askReset(){
+  return !hasProgress()||confirm('当前进度将丢失，确定重新开始？');
+}
 
 function input(n){
   if(S.done||S.sel<0||isGiven(S.sel))return;
@@ -519,6 +539,8 @@ function newGame(tier){
     startTimer();render();save();
   },40);
 }
+
+$('btnNew').onclick=()=>{ if(askReset())newGame(S.tier); };
 
 if(load()){startTimer();render();}
 else newGame(TIERS[0]);
