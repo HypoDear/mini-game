@@ -554,6 +554,14 @@ function confetti(n){
   setTimeout(()=>box.remove(),4200);
 }
 
+function hasProgress(){
+  if(S.over||!S.board)return false;
+  return S.left<S.tier.rows*S.tier.cols;
+}
+function askReset(){
+  return !hasProgress()||confirm('当前进度将丢失，确定重新开始？');
+}
+
 function buildSeg(){
   const el=$('lvSeg');
   if(!el.children.length){
@@ -561,7 +569,10 @@ function buildSeg(){
       const b=document.createElement('button');
       b.innerHTML='<span>'+t.name+'</span><i>'+t.sub+'</i>';
       b.setAttribute('role','tab');
-      b.onclick=()=>{ if(t.id!==S.tier.id||confirm('重新开始一局'+t.name+'？')) newGame(t); };
+      b.onclick=()=>{
+        if(t.id===S.tier.id)return;
+        if(askReset())newGame(t);
+      };
       el.appendChild(b);
     });
   }
@@ -595,9 +606,16 @@ function newGame(tier){
   },40);
 }
 
-$('btnNew').onclick=()=>newGame(S.tier);
+$('btnNew').onclick=()=>{ if(askReset())newGame(S.tier); };
 window.addEventListener('resize',()=>{ if(S.board){layout();renderAll();} });
 document.addEventListener('visibilitychange',()=>{ if(document.hidden)stopTimer(); else if(!S.over)startTimer(); });
+
+window.addEventListener('beforeunload',e=>{
+  if(!hasProgress())return;
+  e.preventDefault();
+  e.returnValue='';
+  return '';
+});
 
 newGame(TIERS[0]);
 </script>
