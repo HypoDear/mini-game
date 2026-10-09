@@ -10,7 +10,7 @@
 :root{
   --paper:#f4efe4; --paper2:#fbf8f1; --ink:#2f2a24; --ink-soft:#8c8275;
   --line:#d8cfbe; --line-bold:#3d3630; --accent:#1f6f8b; --accent-soft:#dceaf0;
-  --bad:#c0463c; --bad-soft:#f6ddd9; --good:#2e7d5b; --sel:#e8dcc2; --peer:#efe7d6;
+  --bad:#c0463c; --bad-soft:#f6ddd9; --good:#2e7d5b; --sel:#e8dcc2;
   --radius:10px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -39,6 +39,16 @@ body{
 .tools button{border:1px solid var(--line);background:var(--paper2);color:var(--ink);
   border-radius:999px;padding:5px 11px;font:600 11.5px/1 inherit;cursor:pointer}
 .tools button:active{background:#ece3d2}
+.tools button.snd{position:relative;width:88px;height:24px;padding:0 4px 0 11px;flex:none;
+  display:flex;align-items:center;justify-content:space-between;gap:6px}
+.tools button.snd .sndTx{letter-spacing:1px;color:var(--ink-soft);transition:color .18s}
+.tools button.snd .sndTr{position:relative;flex:none;width:30px;height:16px;border-radius:999px;
+  background:#d8cfbe;transition:background .18s}
+.tools button.snd .sndTr::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(47,42,36,.35);transition:transform .18s}
+.tools button.snd[aria-checked="true"] .sndTx{color:var(--ink)}
+.tools button.snd[aria-checked="true"] .sndTr{background:var(--good)}
+.tools button.snd[aria-checked="true"] .sndTr::after{transform:translateX(14px)}
 .board-box{position:relative;width:100%;aspect-ratio:1;
   border:2.5px solid var(--line-bold);border-radius:4px;
   background:var(--paper2);overflow:hidden}
@@ -47,17 +57,28 @@ body{
 .cell{position:relative;display:flex;align-items:center;justify-content:center;
   border-right:1px solid var(--line);border-bottom:1px solid var(--line);
   font-size:clamp(18px,5.4vw,27px);cursor:pointer;user-select:none;
-  transition:background .12s}
+  background:linear-gradient(160deg,#fffdf8 0%,#fcf9f2 55%,#f3ebdb 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1.5px 0 rgba(140,124,96,.14);
+  text-shadow:0 1px 0 rgba(255,255,255,.8);
+  transition:background .12s,box-shadow .14s,transform .14s cubic-bezier(.34,1.56,.64,1)}
 .cell:nth-child(9n){border-right:none}
 .cell:nth-child(n+73){border-bottom:none}
 .cell.br{border-right:2px solid var(--line-bold)}
 .cell.bb{border-bottom:2px solid var(--line-bold)}
-.cell.given{font-weight:700;color:var(--ink)}
-.cell.user{color:var(--accent);font-weight:600}
-.cell.peer{background:var(--peer)}
-.cell.same{background:var(--accent-soft)}
-.cell.sel{background:var(--sel);box-shadow:inset 0 0 0 2px var(--ink)}
-.cell.bad{background:var(--bad-soft);color:var(--bad)!important}
+.cell.given{font-weight:700;color:var(--ink);
+  text-shadow:0 1px 0 rgba(255,255,255,.85),0 -.5px .5px rgba(47,42,36,.16)}
+.cell.user{color:var(--accent);font-weight:600;text-shadow:0 1px 0 rgba(255,255,255,.8)}
+.cell.same{background:linear-gradient(160deg,#f2fbfe 0%,var(--accent-soft) 55%,#cfe3ea 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1.5px 0 rgba(31,111,139,.14),0 1px 2px rgba(31,111,139,.08)}
+.cell.sel{background:linear-gradient(160deg,#fdf6e3 0%,var(--sel) 55%,#dfd0ae 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    inset 0 -1.5px 0 rgba(120,102,70,.26),
+    inset 0 0 0 2px rgba(47,42,36,.85),
+    0 7px 10px rgba(47,42,36,.2),
+    0 2px 3px rgba(47,42,36,.14);
+  transform:translateY(-2px) scale(1.05);z-index:2}
+.cell.bad{background:linear-gradient(160deg,#fbeae7 0%,var(--bad-soft) 55%,#efd2cd 100%);color:var(--bad)!important}
 .cell.flash{animation:pop .4s}
 @keyframes pop{0%{transform:scale(.5);opacity:.3}60%{transform:scale(1.12)}100%{transform:scale(1)}}
 .cell.ripple{animation:ripple .5s ease-out both}
@@ -88,12 +109,17 @@ body{
   100%{transform:translateY(102vh) rotate(720deg);opacity:.85}
 }
 .pad{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
-.pad button{aspect-ratio:1/1.15;border:1px solid var(--line);background:var(--paper2);
+.pad button{aspect-ratio:1/1.15;border:1px solid var(--line);
+  background:linear-gradient(160deg,#fffdf8 0%,var(--paper2) 55%,#f1e9d9 100%);
   border-radius:var(--radius);font:600 clamp(17px,4.8vw,22px)/1 inherit;
   color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:opacity .15s,background .12s}
-.pad button:active{background:var(--sel)}
-.pad button.done{color:var(--line);background:transparent;border-color:#e7e0d1}
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1.5px 0 rgba(140,124,96,.16),0 1.5px 2px rgba(47,42,36,.08);
+  text-shadow:0 1px 0 rgba(255,255,255,.8);
+  transition:opacity .15s,background .12s,transform .12s,box-shadow .14s}
+.pad button:active{background:linear-gradient(160deg,#fdf6e3 0%,var(--sel) 60%,#dfd0ae 100%);
+  transform:translateY(1px) scale(.97);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -1.5px 0 rgba(120,102,70,.2)}
+.pad button.done{color:var(--line);background:transparent;border-color:#e7e0d1;box-shadow:none}
 .pad button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .mask{position:fixed;inset:0;background:rgba(244,239,228,.94);display:none;
   flex-direction:column;align-items:center;justify-content:center;gap:14px;
@@ -107,9 +133,6 @@ body{
 .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--ink);
   border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){
-  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
-}
 </style>
 </head>
 <body>
@@ -117,7 +140,7 @@ body{
   <div class="diffs" id="diffs" role="tablist" aria-label="难度选择"></div>
   <div class="bar">
     <span></span>
-    <div class="tools"><button id="btnNew">重开</button></div>
+    <div class="tools"><button id="btnNew">重开</button><button class="snd" id="sndBtn" role="switch" aria-label="音效开关" aria-checked="true"><span class="sndTx">音效</span><span class="sndTr"></span></button></div>
   </div>
   <div class="board-box"><div class="grid" id="grid" role="grid" aria-label="数独棋盘"></div></div>
   <div class="pad" id="pad" aria-label="数字键盘"></div>
@@ -126,6 +149,67 @@ body{
 
 <script>
 'use strict';
+
+const SFX=(function(){
+  const KEY='mg_sound';
+  let ctx=null,master=null,nb=null,on=true;
+  try{if(localStorage.getItem(KEY)==='0')on=false;}catch(e){}
+  function ensure(){
+    if(!on)return null;
+    if(!ctx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC)return null;
+      ctx=new AC();
+      master=ctx.createGain();master.gain.value=0.5;master.connect(ctx.destination);
+      const n=Math.floor(ctx.sampleRate*0.5);nb=ctx.createBuffer(1,n,ctx.sampleRate);
+      const d=nb.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;
+    }
+    if(ctx.state!=='running')ctx.resume().catch(()=>{});
+    return ctx;
+  }
+  function tone(o){
+    const c=ensure();if(!c)return;
+    const t=c.currentTime+(o.delay||0),s=c.createOscillator(),g=c.createGain();
+    s.type=o.type||'sine';
+    s.frequency.setValueAtTime(o.f,t);
+    if(o.f2)s.frequency.exponentialRampToValueAtTime(Math.max(20,o.f2),t+(o.dur||.2));
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(o.g||.1,t+(o.a||.004));
+    g.gain.exponentialRampToValueAtTime(.0008,t+(o.dur||.2));
+    s.connect(g);g.connect(master);
+    s.start(t);s.stop(t+(o.dur||.2)+.06);
+  }
+  function noise(o){
+    const c=ensure();if(!c)return;
+    const t=c.currentTime+(o.delay||0),s=c.createBufferSource();
+    s.buffer=nb;s.playbackRate.value=o.rate||1;
+    const f=c.createBiquadFilter();f.type=o.type||'bandpass';f.frequency.value=o.f||2000;if(o.q)f.Q.value=o.q;
+    const g=c.createGain();
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(o.g||.1,t+(o.a||.003));
+    g.gain.exponentialRampToValueAtTime(.0008,t+(o.dur||.1));
+    s.connect(f);f.connect(g);g.connect(master);
+    s.start(t);s.stop(t+(o.dur||.1)+.05);
+  }
+  document.addEventListener('pointerdown',ensure,{once:true});
+  document.addEventListener('keydown',ensure,{once:true});
+  return {
+    get on(){return on;},
+    set(v){on=!!v;try{localStorage.setItem(KEY,on?'1':'0');}catch(e){}if(on)ensure();},
+    ensure,tone,noise
+  };
+})();
+
+const SFXG={
+  bead(){const f=880*(1+(Math.random()*.06-.03));
+    SFX.noise({type:'highpass',f:3200,dur:.025,g:.045});
+    SFX.tone({f:f,dur:.14,g:.14});
+    SFX.tone({f:f*2,dur:.06,g:.045,delay:.005});},
+  erase(){SFX.tone({f:620,f2:560,dur:.10,g:.09});},
+  ding(){SFX.tone({f:1046.5,dur:.35,g:.09});SFX.tone({f:1568,dur:.42,g:.055,delay:.07});},
+  bad(){SFX.tone({type:'triangle',f:233,f2:180,dur:.18,g:.13});SFX.noise({type:'lowpass',f:600,dur:.06,g:.04});},
+  win(){[523.25,659.25,783.99,1046.5,1318.5,1568].forEach((f,i)=>SFX.tone({type:'triangle',f,dur:.55,g:.095,delay:i*.1}));}
+};
 
 const UNITS=[],ROWS=[],COLS=[],BOXES=[];
 for(let i=0;i<9;i++){const row=[],col=[],box=[];
@@ -287,7 +371,9 @@ for(let i=0;i<81;i++){
 }
 grid.addEventListener('click',e=>{
   const t=e.target.closest('.cell');if(!t)return;
-  S.sel=+t.dataset.i;render();
+  const i=+t.dataset.i;
+  S.sel=(S.sel===i)?-1:i;
+  render();
 });
 
 function buildDiffs(){
@@ -365,15 +451,19 @@ function input(n){
     if(after.has(at)&&!before.has(at)){
       const grp=[...after].filter(i=>!before.has(i));
       playCells(grp.length?grp:[at],'shake',0,360);
+      SFXG.bad();
     }else{
+      SFXG.bead();
       rippleCompleted(at);
     }
+  }else{
+    SFXG.erase();
   }
 }
 
 function erase(){
   if(S.done||S.sel<0||isGiven(S.sel)||!S.values[S.sel])return;
-  S.values[S.sel]=0;render();save();
+  S.values[S.sel]=0;SFXG.erase();render();save();
 }
 
 function conflicts(){
@@ -400,16 +490,14 @@ function checkWin(){
     '<button class="mbtn" id="againBtn">再来一局</button>';
   sweepBoard(()=>{
     confetti(90);
+    SFXG.win();
     $('maskBody').innerHTML=html;
     $('mask').classList.add('show');
     $('againBtn').onclick=()=>{$('mask').classList.remove('show');newGame(S.tier);};
   });
 }
 
-const REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
-
 function playCells(list,cls,step,dur){
-  if(REDUCED)return;
   list.forEach((idx,k)=>{
     const el=cells[idx];if(!el)return;
     setTimeout(()=>{
@@ -425,15 +513,16 @@ function rippleCompleted(idx){
   const r=(idx/9)|0,c=idx%9,b=((r/3)|0)*3+((c/3)|0);
   const units=[ROWS[r],COLS[c],BOXES[b]];
   const bad=conflicts();
+  let hits=0;
   for(const u of units){
     const full=u.cells.every(i=>S.values[i]!==0);
     const clean=u.cells.every(i=>!bad.has(i));
-    if(full&&clean)playCells(u.cells,'ripple',32,560);
+    if(full&&clean){playCells(u.cells,'ripple',32,560);hits++;}
   }
+  if(hits)SFXG.ding();
 }
 
 function sweepBoard(cb){
-  if(REDUCED){cb&&cb();return;}
   const order=Array.from({length:81},(_,i)=>i)
     .sort((a,b)=>(((a/9)|0)+a%9)-(((b/9)|0)+b%9));
   playCells(order,'sweep',14,660);
@@ -442,7 +531,6 @@ function sweepBoard(cb){
 
 const CONFETTI_COLORS=['#c0463c','#2e7d5b','#1f6f8b','#b08422','#8c5a9e','#d98032'];
 function confetti(n){
-  if(REDUCED)return;
   const box=document.createElement('div');
   box.className='confetti';
   for(let i=0;i<n;i++){
@@ -472,14 +560,12 @@ function stopTimer(){if(S.timer)clearInterval(S.timer);S.timer=null;}
 function render(){
   const bad=conflicts();
   const selV=S.sel>=0?S.values[S.sel]:0;
-  const peers=S.sel>=0?new Set(PEERS[S.sel]):new Set();
   for(let i=0;i<81;i++){
     const d=cells[i],v=S.values[i],c=i%9,r=(i/9)|0;
     let cls='cell';
     if(c===2||c===5)cls+=' br';
     if(r===2||r===5)cls+=' bb';
     if(v)cls+=isGiven(i)?' given':' user';
-    if(peers.has(i))cls+=' peer';
     if(v&&selV&&v===selV&&i!==S.sel)cls+=' same';
     if(bad.has(i))cls+=' bad';
     if(i===S.sel)cls+=' sel';
@@ -541,6 +627,10 @@ function newGame(tier){
 }
 
 $('btnNew').onclick=()=>{ if(askReset())newGame(S.tier); };
+const sndBtn=$('sndBtn');
+function syncSnd(){sndBtn.setAttribute('aria-checked',SFX.on?'true':'false');}
+sndBtn.onclick=()=>{SFX.set(!SFX.on);syncSnd();if(SFX.on)SFXG.bead();};
+syncSnd();
 
 if(load()){startTimer();render();}
 else newGame(TIERS[0]);
