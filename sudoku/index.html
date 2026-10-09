@@ -24,8 +24,6 @@ body{
 }
 .wrap{width:100%;max-width:480px;display:flex;flex-direction:column;gap:13px}
 .brand{font-size:20px;font-weight:700;letter-spacing:5px;text-align:center}
-
-/* 难度分段控件 */
 .diffs{display:flex;background:var(--paper2);border:1px solid var(--line);
   border-radius:var(--radius);padding:3px;gap:3px}
 .diffs button{flex:1;border:none;background:transparent;border-radius:7px;
@@ -36,8 +34,6 @@ body{
 .diffs button i{font-style:normal;font-size:10px;opacity:.75;letter-spacing:.5px}
 .diffs button.on{background:var(--ink);color:var(--paper)}
 .diffs button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-
-/* 棋盘 */
 .board-box{position:relative;width:100%;aspect-ratio:1;
   border:2.5px solid var(--line-bold);border-radius:4px;
   background:var(--paper2);overflow:hidden}
@@ -59,8 +55,6 @@ body{
 .cell.bad{background:var(--bad-soft);color:var(--bad)!important}
 .cell.flash{animation:pop .4s}
 @keyframes pop{0%{transform:scale(.5);opacity:.3}60%{transform:scale(1.12)}100%{transform:scale(1)}}
-
-/* 数字盘 */
 .pad{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
 .pad button{aspect-ratio:1/1.15;border:1px solid var(--line);background:var(--paper2);
   border-radius:var(--radius);font:600 clamp(17px,4.8vw,22px)/1 inherit;
@@ -69,8 +63,6 @@ body{
 .pad button:active{background:var(--sel)}
 .pad button.done{color:var(--line);background:transparent;border-color:#e7e0d1}
 .pad button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-
-/* 遮罩 */
 .mask{position:fixed;inset:0;background:rgba(244,239,228,.94);display:none;
   flex-direction:column;align-items:center;justify-content:center;gap:14px;
   z-index:9;padding:24px;text-align:center}
@@ -83,7 +75,6 @@ body{
 .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--ink);
   border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-
 @media(prefers-reduced-motion:reduce){
   *{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
@@ -99,15 +90,8 @@ body{
 <div class="mask" id="mask" role="dialog" aria-live="polite"><div id="maskBody"></div></div>
 
 <script>
-/*!
- * 数独 Sudoku
- * 六级技巧求解器 + 技巧驱动的难度分级，保证每局纯逻辑可解、无需猜测。
- * 算法思路参考开源项目 Minjia-Hu/retro-arcade (MIT License)；
- * 技巧求解器与难度分级为重新实现。
- * Released under the MIT License.
- */
 'use strict';
-/* ========== 单元 / 关联格 ========== */
+
 const UNITS=[],ROWS=[],COLS=[],BOXES=[];
 for(let i=0;i<9;i++){const row=[],col=[],box=[];
   for(let k=0;k<9;k++){row.push(i*9+k);col.push(k*9+i);
@@ -119,7 +103,6 @@ for(let i=0;i<81;i++){const s=new Set();
   for(const u of UNITS)if(u.cells.includes(i))for(const c of u.cells)if(c!==i)s.add(c);
   PEERS.push([...s]);}
 
-/* ========== 基础算法 ========== */
 function cands(b,idx){const used=new Set(),r=(idx/9)|0,c=idx%9,br=((r/3)|0)*3,bc=((c/3)|0)*3;
   for(let k=0;k<9;k++){used.add(b[r*9+k]);used.add(b[k*9+c]);used.add(b[(br+((k/3)|0))*9+(bc+k%3)]);}
   const o=[];for(let v=1;v<=9;v++)if(!used.has(v))o.push(v);return o;}
@@ -142,12 +125,10 @@ function candGrid(v){const g=new Array(81).fill(null);
 function combos(a,k){const o=[];(function rec(s,cur){if(cur.length===k){o.push(cur.slice());return;}
   for(let i=s;i<a.length;i++){cur.push(a[i]);rec(i+1,cur);cur.pop();}})(0,[]);return o;}
 
-/* ========== 位置描述 ========== */
 const pz=i=>`第${((i/9)|0)+1}行第${i%9+1}列`;
 const lz=a=>a.map(pz).join('、');
 const uz=u=>u.type==='row'?`第${u.i+1}行`:u.type==='col'?`第${u.i+1}列`:`第${u.i+1}宫`;
 
-/* ========== 六级技巧 ========== */
 function nakedSingle(v,c){for(let i=0;i<81;i++){if(v[i]||c[i].size!==1)continue;const x=[...c[i]][0];
   return{level:1,tech:'nakedSingle',place:[{idx:i,val:x}],elim:[],focus:[i],
     msg:`${pz(i)} 的候选数只剩 ${x} 一个，可以直接填入。`};}return null;}
@@ -222,16 +203,15 @@ function solveTech(p,max){const v=p.slice(),c=candGrid(v),cnt={};let top=0,g=0;
     applyStep(v,c,s);cnt[s.tech]=(cnt[s.tech]||0)+1;if(s.level>top)top=s.level;}
   return{solved:v.every(x=>x),maxLevel:top,counts:cnt};}
 
-/* ========== 技巧约束生成 ========== */
 function digByTech(sol,clues,maxLv){const p=sol.slice();
   const pos=shuffle(Array.from({length:81},(_,i)=>i));let g=81;
   for(const i of pos){if(g<=clues)break;const sv=p[i];if(!sv)continue;
     p[i]=0;if(!solveTech(p,maxLv).solved)p[i]=sv;else g--;}
   return p;}
 const TIERS=[
-  {id:'easy',  name:'简单', sub:'入门',   min:1,max:2,clues:36},
-  {id:'medium',name:'中等', sub:'进阶',   min:3,max:4,clues:30},
-  {id:'hard',  name:'困难', sub:'高阶',   min:4,max:6,clues:26},
+  {id:'easy',  name:'简单', sub:'入门', min:1,max:2,clues:36},
+  {id:'medium',name:'中等', sub:'进阶', min:3,max:4,clues:30},
+  {id:'hard',  name:'困难', sub:'高阶', min:4,max:6,clues:26},
 ];
 const LEVELS=['-','唯一候选数','隐性唯一数','区块排除','显性数对','隐性数对','X-Wing'];
 function generate(t){
@@ -244,26 +224,23 @@ function generate(t){
     if(r.maxLevel>=t.min&&r.maxLevel<=t.max)return{puzzle:p,solution:sol,maxLevel:r.maxLevel};
     if(r.maxLevel>bl){bl=r.maxLevel;best={puzzle:p,solution:sol,maxLevel:r.maxLevel};}
   }
-  // 兜底：拒绝采样未命中目标区间时，退化为"保证可解"的盘面，绝不返回空值
   if(best)return best;
   const sol=generateSolved();
   const p=digByTech(sol,t.clues,1);
   return{puzzle:p,solution:sol,maxLevel:solveTech(p,6).maxLevel};}
 
-/* ==================== 游戏状态 ==================== */
 const S={
-  puzzle:[],    // 题面（给定数字，0 为空）
-  solution:[],  // 唯一解
-  values:[],    // 玩家当前盘面
+  puzzle:[],
+  solution:[],
+  values:[],
   tier:TIERS[0],
-  maxLevel:0,   // 本局所需最高技巧等级
-  sel:-1,       // 当前选中格
+  maxLevel:0,
+  sel:-1,
   start:0, elapsed:0, done:false, timer:null,
 };
 const $=id=>document.getElementById(id);
 const KEY='sudoku_save_v3';
 
-/* ==================== 棋盘构建 ==================== */
 const grid=$('grid'),cells=[];
 for(let i=0;i<81;i++){
   const d=document.createElement('div');
@@ -278,7 +255,6 @@ grid.addEventListener('click',e=>{
   S.sel=+t.dataset.i;render();
 });
 
-/* ==================== 难度选择 ==================== */
 function buildDiffs(){
   const el=$('diffs');
   if(!el.children.length){
@@ -287,7 +263,6 @@ function buildDiffs(){
       b.innerHTML=`<span>${t.name}</span><i>${t.sub}</i>`;
       b.setAttribute('role','tab');
       b.onclick=()=>{
-        // 切换难度直接开新局；重复点当前难度先确认，避免误触丢进度
         if(t.id!==S.tier.id||confirm('重新开始一局'+t.name+'？'))newGame(t);
       };
       el.appendChild(b);
@@ -300,7 +275,6 @@ function buildDiffs(){
   });
 }
 
-/* ==================== 数字键盘 ==================== */
 const pad=$('pad');
 for(let n=1;n<=9;n++){
   const b=document.createElement('button');
@@ -313,7 +287,6 @@ pad.addEventListener('click',e=>{
   input(+b.dataset.n);
 });
 
-/* ==================== 键盘操作 ==================== */
 document.addEventListener('keydown',e=>{
   if(e.key>='1'&&e.key<='9'){input(+e.key);e.preventDefault();return;}
   if(e.key==='Backspace'||e.key==='Delete'||e.key==='0'){erase();e.preventDefault();return;}
@@ -322,19 +295,16 @@ document.addEventListener('keydown',e=>{
     if(S.sel<0)S.sel=0;
     else{
       const n=S.sel+mv;
-      // 左右移动不跨行
       if(n>=0&&n<81&&!(Math.abs(mv)===1&&((n/9)|0)!==((S.sel/9)|0)))S.sel=n;
     }
     render();e.preventDefault();
   }
 });
 
-/* ==================== 填写逻辑 ==================== */
 const isGiven=i=>S.puzzle[i]!==0;
 
 function input(n){
   if(S.done||S.sel<0||isGiven(S.sel))return;
-  // 再次点击同一数字即清除，省去独立的擦除按钮
   S.values[S.sel]=S.values[S.sel]===n?0:n;
   if(S.values[S.sel]){
     cells[S.sel].classList.add('flash');
@@ -348,7 +318,6 @@ function erase(){
   S.values[S.sel]=0;render();save();
 }
 
-/* 返回所有违反行/列/宫唯一性的格子下标 */
 function conflicts(){
   const bad=new Set();
   for(const u of UNITS){
@@ -363,9 +332,7 @@ function conflicts(){
   return bad;
 }
 
-/* ==================== 胜负判定 ==================== */
 function checkWin(){
-  // 防御：盘面未就绪时不判定（空数组的 some 恒为 false，会误判为完成）
   if(S.values.length!==81||S.solution.length!==81)return;
   if(S.values.some((v,i)=>v!==S.solution[i]))return;
   S.done=true;stopTimer();
@@ -378,7 +345,6 @@ function checkWin(){
   try{localStorage.removeItem(KEY);}catch(e){}
 }
 
-/* ==================== 计时（后台记录，仅完成页展示） ==================== */
 const fmt=s=>String((s/60)|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 function startTimer(){
   stopTimer();
@@ -386,7 +352,6 @@ function startTimer(){
 }
 function stopTimer(){if(S.timer)clearInterval(S.timer);S.timer=null;}
 
-/* ==================== 渲染 ==================== */
 function render(){
   const bad=conflicts();
   const selV=S.sel>=0?S.values[S.sel]:0;
@@ -404,7 +369,6 @@ function render(){
     d.className=cls;
     d.textContent=v||'';
   }
-  // 数字已填满 9 个且无冲突时置灰
   const hasConflict=bad.size>0;
   for(const b of pad.children){
     const n=+b.dataset.n;
@@ -413,17 +377,15 @@ function render(){
   buildDiffs();
 }
 
-/* ==================== 本地存档 ==================== */
 function save(){
   if(S.done)return;
   try{
     localStorage.setItem(KEY,JSON.stringify({
       p:S.puzzle,s:S.solution,v:S.values,t:S.tier.id,ml:S.maxLevel,e:S.elapsed
     }));
-  }catch(e){/* 隐私模式或配额超限，忽略 */}
+  }catch(e){}
 }
 
-/** 存档校验：结构 + 取值 + 题面与解的一致性，任一不符则丢弃重开 */
 function load(){
   try{
     const o=JSON.parse(localStorage.getItem(KEY)||'null');
@@ -431,10 +393,8 @@ function load(){
     const arr=x=>Array.isArray(x)&&x.length===81&&x.every(n=>Number.isInteger(n)&&n>=0&&n<=9);
     if(!arr(o.p)||!arr(o.s)||!arr(o.v))return false;
     const t=TIERS.find(x=>x.id===o.t);if(!t)return false;
-    // 解必须完整合法
     if(o.s.some(n=>n===0))return false;
     for(const u of UNITS)if(new Set(u.cells.map(i=>o.s[i])).size!==9)return false;
-    // 题面必须是解的子集，玩家盘面必须包含全部给定数字
     for(let i=0;i<81;i++){
       if(o.p[i]&&o.p[i]!==o.s[i])return false;
       if(o.p[i]&&o.v[i]!==o.p[i])return false;
@@ -448,13 +408,11 @@ function load(){
   }catch(e){return false;}
 }
 
-/* ==================== 新开一局 ==================== */
 function newGame(tier){
   S.tier=tier;
   $('maskBody').innerHTML='<div class="spin"></div><p>正在生成盘面…</p>';
   $('mask').classList.add('show');
   buildDiffs();
-  // 让遮罩先绘制出来，再做耗时的盘面生成
   setTimeout(()=>{
     const g=generate(tier);
     S.puzzle=g.puzzle;S.solution=g.solution;S.maxLevel=g.maxLevel;
@@ -465,7 +423,6 @@ function newGame(tier){
   },40);
 }
 
-/* ==================== 启动 ==================== */
 if(load()){startTimer();render();}
 else newGame(TIERS[0]);
 window.addEventListener('beforeunload',save);
