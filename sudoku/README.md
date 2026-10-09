@@ -64,8 +64,6 @@ python3 -m http.server 8000
 5. 隐性数对 / 三元组（Hidden Pair / Triple）
 6. X-Wing
 
-## 致谢与许可
-
-算法思路参考开源项目 [retro-arcade](https://github.com/Minjia-Hu/retro-arcade)（MIT License）的棋盘表示与回溯生成设计；六级技巧求解器与难度分级系统为重新实现。
+## 许可
 
 本项目基于 MIT License 发布，详见根目录 [LICENSE](../LICENSE)。
