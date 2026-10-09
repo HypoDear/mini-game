@@ -17,7 +17,7 @@
 html,body{margin:0;height:100%}
 body{
   background:var(--paper); color:var(--ink);
-  font-family:"Noto Serif SC","Songti SC",Georgia,"Times New Roman",serif;
+  font-family:"Kaiti SC","STKaiti",KaiTi,"Noto Serif SC","Songti SC",Georgia,"Times New Roman",serif;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));
   overscroll-behavior:none; touch-action:manipulation;
@@ -37,9 +37,9 @@ body{
   font-size:12px;color:var(--ink-soft);min-height:22px}
 .tools{display:flex;gap:6px;flex:none}
 .tools button{border:1px solid var(--line);background:var(--paper2);color:var(--ink);
-  border-radius:999px;padding:5px 11px;font:600 11.5px/1 inherit;cursor:pointer}
+  border-radius:999px;padding:5px 11px;height:29px;font-family:inherit;cursor:pointer}
 .tools button:active{background:#ece3d2}
-.tools button.snd{position:relative;width:88px;height:24px;padding:0 4px 0 11px;flex:none;
+.tools button.snd{position:relative;width:88px;height:29px;padding:0 4px 0 11px;flex:none;
   display:flex;align-items:center;justify-content:space-between;gap:6px}
 .tools button.snd .sndTx{letter-spacing:1px;color:var(--ink-soft);transition:color .18s}
 .tools button.snd .sndTr{position:relative;flex:none;width:30px;height:16px;border-radius:999px;
@@ -111,7 +111,7 @@ body{
 .pad{display:grid;grid-template-columns:repeat(9,1fr);gap:4px}
 .pad button{aspect-ratio:1/1.15;border:1px solid var(--line);
   background:linear-gradient(160deg,#fffdf8 0%,var(--paper2) 55%,#f1e9d9 100%);
-  border-radius:var(--radius);font:600 clamp(17px,4.8vw,22px)/1 inherit;
+  border-radius:var(--radius);font-family:inherit;
   color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1.5px 0 rgba(140,124,96,.16),0 1.5px 2px rgba(47,42,36,.08);
   text-shadow:0 1px 0 rgba(255,255,255,.8);
@@ -128,7 +128,7 @@ body{
 .mask h2{margin:0;font-size:26px;letter-spacing:4px;color:var(--good)}
 .mask p{margin:0;color:var(--ink-soft);font-size:13px;line-height:1.9}
 .mask .mbtn{border:none;background:var(--ink);color:var(--paper);
-  border-radius:var(--radius);padding:12px 32px;font:600 14px/1 inherit;
+  border-radius:var(--radius);padding:12px 32px;font-family:inherit;
   cursor:pointer;letter-spacing:2px}
 .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--ink);
   border-radius:50%;animation:sp .8s linear infinite}

@@ -17,7 +17,7 @@
 html,body{margin:0;height:100%;overflow-x:hidden}
 body{
   background:var(--paper); color:var(--ink);
-  font-family:"Noto Serif SC","Songti SC",Georgia,"Times New Roman",serif;
+  font-family:"Kaiti SC","STKaiti",KaiTi,"Noto Serif SC","Songti SC",Georgia,"Times New Roman",serif;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));
   overscroll-behavior:none; touch-action:manipulation;
@@ -38,9 +38,9 @@ body{
 .bar b{color:var(--ink);font-variant-numeric:tabular-nums}
 .tools{display:flex;gap:6px;flex:none}
 .tools button{border:1px solid var(--line);background:var(--paper2);color:var(--ink);
-  border-radius:999px;padding:5px 11px;font:600 11.5px/1 inherit;cursor:pointer}
+  border-radius:999px;padding:5px 11px;height:29px;font-family:inherit;cursor:pointer}
 .tools button:active{background:#ece3d2}
-.tools button.snd{position:relative;width:88px;height:24px;padding:0 4px 0 11px;flex:none;
+.tools button.snd{position:relative;width:88px;height:29px;padding:0 4px 0 11px;flex:none;
   display:flex;align-items:center;justify-content:space-between;gap:6px}
 .tools button.snd .sndTx{letter-spacing:1px;color:var(--ink-soft);transition:color .18s}
 .tools button.snd .sndTr{position:relative;flex:none;width:30px;height:16px;border-radius:999px;
@@ -125,7 +125,7 @@ body{
 .mask h2{margin:0;font-size:26px;letter-spacing:4px;color:var(--good)}
 .mask p{margin:0;color:var(--ink-soft);font-size:13px;line-height:1.9}
 .mask .mbtn{border:none;background:var(--ink);color:var(--paper);
-  border-radius:var(--radius);padding:12px 32px;font:600 14px/1 inherit;
+  border-radius:var(--radius);padding:12px 32px;font-family:inherit;
   cursor:pointer;letter-spacing:2px}
 .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--ink);
   border-radius:50%;animation:sp .8s linear infinite}
