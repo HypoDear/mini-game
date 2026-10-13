@@ -13,6 +13,7 @@
 | [连连看](llk/) | 汉字牌面，卡住自动重排不会死局 | [开始游戏](https://hypodear.github.io/mini-game/llk/) |
 | [中国象棋](xiangqi/) | 双人对战与三档 AI，含残局闯关 | [开始游戏](https://hypodear.github.io/mini-game/xiangqi/) |
 | [滑块拼图](slide/) | 三档棋盘与两种牌面，开局保证可解 | [开始游戏](https://hypodear.github.io/mini-game/slide/) |
+| [魔方](cube/) | 三/四/五阶，拖动色块即转层 | [开始游戏](https://hypodear.github.io/mini-game/cube/) |
 
 ## 在线地址
 
