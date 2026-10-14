@@ -9,7 +9,6 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23fffdf7'/><stop offset='1' stop-color='%23dcc9a2'/></linearGradient><linearGradient id='s' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23ffffff' stop-opacity='.75'/><stop offset='1' stop-color='%23ffffff' stop-opacity='0'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><rect width='32' height='32' rx='7' fill='url(%23s)'/><g stroke='%233b3228' stroke-width='1.7' stroke-linejoin='round' fill='none'><path d='M16 4.5l9.5 5.5v11L16 26.5 6.5 21V10z'/><path d='M16 4.5L16 15.5M16 15.5l9.5-5.5M16 15.5L6.5 10M16 15.5L16 26.5'/><path d='M16 15.5l9.5 5.5M16 15.5l-9.5 5.5' stroke-opacity='.55'/></g><path d='M16 15.5l9.5-5.5v5.5l-9.5 5.5z' fill='%23b33f2b' opacity='.5'/></svg>">
 <style>
 :root{
-  /* 配色与视觉体系对齐 mini-game 项目（纸感暖色） */
   --paper:#f4efe4; --paper2:#fbf8f1; --ink:#2f2a24; --ink-soft:#8c8275;
   --line:#d8cfbe; --line-bold:#3d3630; --accent:#1f6f8b; --accent-soft:#dceaf0;
   --bad:#c0463c; --good:#2e7d5b; --sel:#e8dcc2;
@@ -26,7 +25,6 @@ body{background:var(--paper);color:var(--ink);
   overscroll-behavior:none}
 .wrap{width:100%;max-width:470px;display:flex;flex-direction:column;gap:7px;
   height:100%;min-height:0}
-/* 分段切换：药丸按钮 */
 .seg{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
 .seg button{flex:1;min-width:0;padding:5px 2px;height:31px;font:inherit;font-size:13px;cursor:pointer;
   color:var(--ink-soft);background:var(--paper2);border:1px solid var(--line);
@@ -44,7 +42,7 @@ body{background:var(--paper);color:var(--ink);
   background:
     repeating-linear-gradient(94deg,rgba(140,120,88,.045) 0 1px,rgba(0,0,0,0) 1px 6px),
     radial-gradient(86% 64% at 50% 28%,rgba(255,255,255,.8),rgba(255,255,255,0) 74%)}
-/* 阴影置于魔方之下；用渐变代替 filter:blur（filter 会让 3D 子树单独栅格化而闪烁） */
+/* 阴影置于魔方之下；用渐变代替 filter:blur，后者会让 3D 子树单独栅格化而闪烁 */
 .stage::after{content:'';position:absolute;left:50%;bottom:5%;width:58%;height:11%;
   transform:translateX(-50%);pointer-events:none;border-radius:50%;z-index:0;
   background:radial-gradient(ellipse at 50% 50%,
@@ -83,7 +81,7 @@ body{background:var(--paper);color:var(--ink);
 .st.hv{--ring:2.5px}
 .turning .st{--ring:2px}
 
-/* 操作行：打乱 / 复原 / 音效 同排等高（对齐象棋的 29px 规格） */
+/* 操作行：三钮同排等高（对齐象棋 29px） */
 .tools{display:flex;gap:6px;align-items:stretch}
 .tools button{flex:1;border:1px solid var(--line);background:var(--paper2);color:var(--ink);
   border-radius:999px;padding:5px 2px;height:29px;font:inherit;font-size:12.5px;
@@ -96,7 +94,6 @@ body{background:var(--paper);color:var(--ink);
 #btnScramble:hover:not(:disabled){background:#1a6079;border-color:#1a6079}
 #btnScramble:active:not(:disabled){background:#155068}
 
-/* 音效开关：与工具按钮等高，同排右侧 */
 button.snd{position:relative;display:flex;align-items:center;justify-content:space-between;gap:6px;
   width:88px;height:29px;padding:0 4px 0 11px;flex:none;cursor:pointer;
   border:1px solid var(--line);border-radius:999px;background:var(--paper2)}
@@ -111,7 +108,6 @@ button.snd:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .snd.on .sndTr{background:var(--good)}
 .snd.on .sndTr i{transform:translateX(14px)}
 
-/* 完成弹窗 */
 .mask{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
   background:rgba(47,42,36,.4);z-index:40;padding:22px}
 .mask.show{display:flex;animation:fade .2s ease}
@@ -204,8 +200,7 @@ function knock(freq,dur,g0,dly,q){
     o.start(t0);o.stop(t0+dur+.05);
   }catch(e){}
 }
-/* 滑动声：噪声过带通，频带由低扫高再落回，模拟片层摩擦，
-   与 knock 的「咔哒」叠起来才是完整的一次转层。 */
+/* 滑动声：噪声过带通，频带由低扫高再落回，模拟片层摩擦 */
 function slide(freq,dur,g0,dly,q){
   if(!SND)return;const a=ac();if(!a)return;
   try{
@@ -224,7 +219,7 @@ function slide(freq,dur,g0,dly,q){
     src.start(t0);src.stop(t0+dur+.05);
   }catch(e){}
 }
-/* 一次转动的「分量」：三阶动 3×3 一层，四/五阶单层格数更多、听感略重 */
+/* 一次转动的「分量」：单层格数越多听感越重 */
 function moveWeight(m){
   const k=curKind();
   return k.N===3?0.9:1;
@@ -321,7 +316,7 @@ function cubeFit(){
   const w=stage.clientWidth||340,h=stage.clientHeight||340;
   return Math.min(w,h)*0.62;
 }
-/* 方块实体外壳：6 个深色面围成闭合盒体，杜绝转动时的穿模 */
+/* 方块外壳：6 个深色面围成闭合盒体，杜绝转动穿模 */
 function addBody(el,C){
   // 实体面必须比贴纸更靠内，否则与贴纸共面争用深度（黑面会盖住彩色）
   const h=C/2-Math.max(1.2,C*0.022), S=C*0.97, m=(C-S)/2, T=[
@@ -337,7 +332,6 @@ function addBody(el,C){
     el.appendChild(d);
   }
 }
-/* 贴纸尺寸与偏移：内缩露出实体形成真实缝隙 */
 const FACE_S=0.93;
 function stickerGeo(C){
   const S=C*FACE_S, m=(C-S)/2;
@@ -381,8 +375,7 @@ function buildCube(){
   }
   paint();
 }
-/* 视角无关定标：把立方体 8 角按变换链投影，取所有可达视角下的最坏包围盒来定标。
-   缩放只与舞台尺寸有关，故不会随视角忽大忽小，也不会转到某个角度就滑出画布。 */
+/* 视角无关定标：按最坏视角的投影包围盒定标，故缩放不随视角变化，也不会滑出画布 */
 const PERSP=1300;                 // 必须与 .scene 的 perspective 一致
 const RX_LIMIT=85;                // 与拖拽时的 rx 夹取范围一致
 const FIT=0.88;                   // 最坏视角下占用舞台的比例
@@ -440,7 +433,7 @@ function rebuild(){
   S.fit=fitToStage();
   applyView();
 }
-/* 舞台可用高度 = wrap 高 - 两行控件 - 行距（实测，不写死像素） */
+/* 舞台可用高度 = wrap 高 - 控件高 - 行距（实测，不写死像素） */
 function layoutStage(){
   const wrap=document.querySelector('.wrap');
   const seg=document.getElementById('kindSeg'), tl=document.querySelector('.tools');
