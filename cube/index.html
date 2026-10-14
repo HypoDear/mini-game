@@ -54,6 +54,11 @@ body{background:var(--paper);color:var(--ink);
 .world{position:absolute;left:50%;top:50%;transform-style:preserve-3d;
   will-change:transform}
 .piece,.pivot{position:absolute;transform-style:preserve-3d}
+.pivot.turning{will-change:transform}   /* 转层动画进合成器线程，主线程零重排 */
+/* 转层期间内壁沿各自法向微推 4px：打破「转动贴纸面与内壁的精确共面」
+   （GPU 在共面瞬间排序翻转 = 偶发黑块）。4px 远小于缝隙可见深度，
+   内壁仍封住缝隙，不会看穿 */
+.t3d{--ipush:4px}
 
 /* 方块实体：哑光深色塑料。贴纸是它的 flat 子元素，与面同面绘制，
    不再作为独立 3D 层参与排序 —— 贴纸与自己的实体面永远不可能互相盖错 */
@@ -64,19 +69,14 @@ body{background:var(--paper);color:var(--ink);
    即使与转层中方块的内部面共面相争也看不出变化 */
 .inr{position:absolute;backface-visibility:hidden;background:#3b332b}
 
-/* 贴纸：内缩露出实体形成真实缝隙 + 塑料反光（不用混合模式，降低合成负担） */
-/* --ring 做高亮：不用 filter，避免新建合成层 */
+/* 哑光贴纸：无镜面高光，仅极弱顶部漫反射 + 边缘切割暗线，接近物理贴纸 */
+/* --ring 做悬停/转层指示：不用 filter，避免新建合成层 */
 .st{--ring:0px;position:absolute;border-radius:12%;
-  background-image:
-    radial-gradient(ellipse 21% 12% at 30% 16%,rgba(255,255,255,.5),rgba(255,255,255,0) 72%),
-    linear-gradient(148deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.06) 30%,
-      rgba(255,255,255,0) 52%,rgba(0,0,0,.04) 82%,rgba(0,0,0,.10) 100%);
+  background-image:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,0) 55%,rgba(0,0,0,.05));
   box-shadow:
-    inset 0 0 0 var(--ring) rgba(255,255,255,.62),
-    inset 0 0 0 1px rgba(255,255,255,.22),
-    inset 0 1.5px 1px -0.5px rgba(255,255,255,.6),
-    inset 0 -2px 2px -1px rgba(0,0,0,.22),
-    0 1px 2px rgba(47,42,36,.22)}
+    inset 0 0 0 var(--ring) rgba(255,255,255,.4),
+    inset 0 0 0 1px rgba(0,0,0,.16),
+    0 1px 1px rgba(0,0,0,.28)}
 
 .st.hv{--ring:2.5px}
 .turning .st{--ring:2px}
@@ -227,18 +227,22 @@ function moveWeight(m){
 const PENTA=[1,1.122,1.26,1.498,1.682];
 const BASE=196;
 const SFX={
-  /* 一次转层 = 摩擦滑动 + 落位咔哒，时长随层厚变化 */
-  turn(i,w){
-    const r=PENTA[i%PENTA.length], k=w===undefined?1:w;
-    slide(BASE*3.0*r,0.10+0.06*k,0.10*k,0,1.5);
-    knock(BASE*2.3*r,0.075,0.26*k,0.05*k,3.4);
-    knock(BASE*5.0*r,0.038,0.075*k,0.055*k,5);
+  /* 一次转层 = 咔啦（棱角依次刮过的快速连击）+ 摩擦底噪 + 咔哒（落位） */
+  turn(i,w,soft){
+    const r=PENTA[i%PENTA.length], k=w===undefined?1:w, v=soft===undefined?1:soft;
+    slide(BASE*3.0*r,0.16,0.22*k*v,0,1.3);
+    for(let j=0;j<4;j++)
+      knock(BASE*2.0*r*(1+j*0.13),0.03,0.34*k*v,0.005+j*0.024,4.5);
+    knock(BASE*2.5*r,0.055,0.44*k*v,0.22,3.0);
+    knock(BASE*5.6*r,0.018,0.14*k*v,0.228,5.5);
   },
   grab(){knock(360,0.055,0.16,0,2.4);slide(900,0.06,0.05,0,1.4);},
   scramble(){
     for(let i=0;i<6;i++){
-      slide(BASE*3.2*(1+i*0.08),0.085,0.09,i*0.055,1.4);
-      knock(BASE*2.5*(1+i*0.09),0.07,0.20,i*0.055,3.4);
+      slide(BASE*3.2*(1+i*0.08),0.11,0.17,i*0.055,1.3);
+      for(let j=0;j<3;j++)
+        knock(BASE*2.1*(1+i*0.09)*(1+j*0.14),0.028,0.26,i*0.055+0.005+j*0.022,4.5);
+      knock(BASE*2.7*(1+i*0.09),0.05,0.36,i*0.055+0.075,3.0);
     }
   },
   solved(){
@@ -373,7 +377,8 @@ function buildCore(N,off){
       d.className='inr';
       d.style.width=W+'px';d.style.height=W+'px';
       d.style.marginLeft=(-W/2)+'px';d.style.marginTop=(-W/2)+'px';
-      d.style.transform=(rot?rot+' ':'')+'translateZ('+(s*(L2-off)*CELL+h)+'px)';
+      d.style.transform=(rot?rot+' ':'')
+        +'translateZ(calc('+(s*(L2-off)*CELL+h)+'px + '+s+'*var(--ipush,0px)))';
       frag.appendChild(d);
     }
   }
@@ -497,6 +502,7 @@ function abortAnim(){
     while(pv.firstChild)world.appendChild(pv.firstChild);  // 先归还，否则整层方块随容器消失
     pv.remove();
   }
+  world.classList.remove('t3d');
 }
 function isStale(g){return g!==S.gen;}
 function animTurn(m,ms,cb,token){
@@ -511,11 +517,13 @@ function animTurn(m,ms,cb,token){
   for(const p of sel)pivot.appendChild(p.el);
   setHover(null);
   pivot.classList.add('turning');
+  world.classList.add('t3d');
   const axis=m.ax==='x'?'rotateX':m.ax==='y'?'rotateY':'rotateZ';
   // 旋向必须与 remapPieces 的落点变换同号，否则动画方向与结果相反
   const sign=(m.ax==='x')?1:-1;
   const target=90*m.d*sign;
-  const reclaim=()=>{while(pivot.firstChild)world.appendChild(pivot.firstChild);pivot.remove();};
+  const reclaim=()=>{while(pivot.firstChild)world.appendChild(pivot.firstChild);
+    pivot.remove();world.classList.remove('t3d');};
   const t0=performance.now();
   if(token===undefined){token=S.gen;}
   S.busy=true;
@@ -531,6 +539,7 @@ function animTurn(m,ms,cb,token){
       pivot.classList.remove('turning');
       for(const p of sel)world.appendChild(p.el);
       pivot.remove();
+      world.classList.remove('t3d');   // 内壁归位
       remapPieces(m);
       S.busy=false;
       if(S.pendingFit){S.pendingFit=false;rebuild();}
@@ -647,7 +656,7 @@ function solveBack(){
       save();return;
     }
     const m=seq[i++];
-    SFX.turn(i,moveWeight(m));
+    SFX.turn(i,moveWeight(m),0.65);   // 连打回放调轻，避免连续咔啦叠成噪音
     animTurn(m,SPEED,()=>{if(isStale(token))return;S.busy=true;setTimeout(step,0);},token);
   };
   step();
