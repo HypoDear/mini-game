@@ -468,7 +468,7 @@ function animTurn(m,ms,cb,token){
   // 旋向必须与 remapPieces 的落点变换同号，否则动画方向与结果相反
   const sign=(m.ax==='x')?1:-1;
   const target=90*m.d*sign;
-  const reclaim=()=>{while(pivot.firstChild)world.appendChild(pv.firstChild);pivot.remove();};
+  const reclaim=()=>{while(pivot.firstChild)world.appendChild(pivot.firstChild);pivot.remove();};
   const t0=performance.now();
   if(token===undefined){token=S.gen;}
   S.busy=true;
