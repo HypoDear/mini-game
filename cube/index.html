@@ -17,13 +17,15 @@
   --cU:#f7f9fb; --cD:#ffd426; --cF:#17c964; --cB:#2f7bff; --cL:#ff8c1a; --cR:#f3303f;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0}
+/* 锁成单屏：拖拽不会演变成整页滚动 */
+html,body{margin:0;height:100%;overflow:hidden}
 body{background:var(--paper);color:var(--ink);
   font-family:"Kaiti SC","STKaiti",KaiTi,"Noto Serif SC","Songti SC",Georgia,"Times New Roman",serif;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));
-  overscroll-behavior:none;min-height:100vh}
-.wrap{width:100%;max-width:470px;display:flex;flex-direction:column;gap:7px}
+  overscroll-behavior:none}
+.wrap{width:100%;max-width:470px;display:flex;flex-direction:column;gap:7px;
+  height:100%;min-height:0}
 /* 分段切换：药丸按钮 */
 .seg{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
 .seg button{flex:1;min-width:0;padding:5px 2px;height:31px;font:inherit;font-size:13px;cursor:pointer;
@@ -32,22 +34,25 @@ body{background:var(--paper);color:var(--ink);
 .seg button:hover{color:var(--ink)}
 .seg button.on{color:var(--paper);background:var(--accent);border-color:var(--accent);font-weight:700}
 
-/* 舞台：对齐 board-box（粗边框 + 小圆角 + paper2 底） */
-.stage{position:relative;width:100%;aspect-ratio:1/1.06;border-radius:4px;
+/* 舞台：--stageMax 由 JS 按实测控件高度写入 */
+.stage{position:relative;aspect-ratio:1/1.06;flex:none;border-radius:4px;
+  width:min(100%,calc(var(--stageMax,100vh)*0.9434));
   border:2.5px solid var(--line-bold);background:var(--paper2);overflow:hidden;
-  box-shadow:0 6px 18px -12px rgba(47,42,36,.5);
+  margin:0 auto;box-shadow:0 6px 18px -12px rgba(47,42,36,.5);
   touch-action:none;cursor:grab}
-.stage::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.55;
+.stage::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.55;z-index:0;
   background:
     repeating-linear-gradient(94deg,rgba(140,120,88,.045) 0 1px,rgba(0,0,0,0) 1px 6px),
     radial-gradient(86% 64% at 50% 28%,rgba(255,255,255,.8),rgba(255,255,255,0) 74%)}
-.stage::after{content:'';position:absolute;left:50%;bottom:6%;width:54%;height:8%;
-  transform:translateX(-50%);pointer-events:none;border-radius:50%;
-  background:radial-gradient(ellipse at 50% 50%,rgba(120,100,66,.28),rgba(120,100,66,0) 72%);
-  filter:blur(6px)}
+/* 阴影置于魔方之下；用渐变代替 filter:blur（filter 会让 3D 子树单独栅格化而闪烁） */
+.stage::after{content:'';position:absolute;left:50%;bottom:5%;width:58%;height:11%;
+  transform:translateX(-50%);pointer-events:none;border-radius:50%;z-index:0;
+  background:radial-gradient(ellipse at 50% 50%,
+    rgba(120,100,66,.22) 0%,rgba(120,100,66,.15) 38%,
+    rgba(120,100,66,.06) 62%,rgba(120,100,66,0) 100%)}
 .stage.drag{cursor:grabbing}
 .stage.onpiece{cursor:grab}
-.scene{position:absolute;inset:0;perspective:1300px;perspective-origin:50% 47%}
+.scene{position:absolute;inset:0;perspective:1300px;perspective-origin:50% 47%;z-index:1}
 .world{position:absolute;left:50%;top:50%;transform-style:preserve-3d;will-change:transform}
 .piece,.pivot{position:absolute;transform-style:preserve-3d}
 
@@ -58,12 +63,14 @@ body{background:var(--paper);color:var(--ink);
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
 
 /* 贴纸：内缩露出实体形成真实缝隙 + 塑料反光 */
-.st{position:absolute;backface-visibility:hidden;border-radius:12%;
+/* --ring 做高亮：不用 filter，避免新建合成层 */
+.st{--ring:0px;position:absolute;backface-visibility:hidden;border-radius:12%;
   background-image:
     linear-gradient(148deg,rgba(255,255,255,.4) 0%,rgba(255,255,255,.11) 30%,
       rgba(255,255,255,0) 52%,rgba(0,0,0,.09) 82%,rgba(0,0,0,.18) 100%);
   background-blend-mode:soft-light;
   box-shadow:
+    inset 0 0 0 var(--ring) rgba(255,255,255,.62),
     inset 0 0 0 1px rgba(255,255,255,.22),
     inset 0 1.5px 1px -0.5px rgba(255,255,255,.6),
     inset 0 -2px 2px -1px rgba(0,0,0,.22),
@@ -73,8 +80,8 @@ body{background:var(--paper);color:var(--ink);
   background:radial-gradient(ellipse at 44% 40%,rgba(255,255,255,.5),rgba(255,255,255,0) 70%);
   transform:rotate(-13deg)}
 
-.st.hv{filter:brightness(1.12) saturate(1.04)}
-.turning .st{filter:brightness(1.1)}
+.st.hv{--ring:2.5px}
+.turning .st{--ring:2px}
 
 /* 操作行：打乱 / 复原 / 音效 同排等高（对齐象棋的 29px 规格） */
 .tools{display:flex;gap:6px;align-items:stretch}
@@ -126,6 +133,13 @@ button.snd:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
 @media (max-height:700px){
   .stage{aspect-ratio:1/0.96}
+}
+@media (orientation:landscape) and (max-height:560px){
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) var(--stageMax,60vh);
+    gap:7px 12px;align-content:center;align-items:center;max-width:none}
+  .wrap>*{grid-column:1;min-width:0;width:100%;max-width:330px;
+    margin-left:auto;margin-right:auto}
+  .stage{grid-column:2;grid-row:1/span 2;aspect-ratio:1/1.06;width:100%;max-width:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
 </style>
@@ -367,25 +381,48 @@ function buildCube(){
   }
   paint();
 }
-function contentBox(){
-  const sel='.st';
-  let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9,any=false;
-  for(const e of world.querySelectorAll(sel)){
-    const q=e.getBoundingClientRect();
-    if(q.width<1)continue;
-    any=true;
-    mnx=Math.min(mnx,q.left);mxx=Math.max(mxx,q.right);
-    mny=Math.min(mny,q.top);mxy=Math.max(mxy,q.bottom);
+/* 视角无关定标：把立方体 8 角按变换链投影，取所有可达视角下的最坏包围盒来定标。
+   缩放只与舞台尺寸有关，故不会随视角忽大忽小，也不会转到某个角度就滑出画布。 */
+const PERSP=1300;                 // 必须与 .scene 的 perspective 一致
+const RX_LIMIT=85;                // 与拖拽时的 rx 夹取范围一致
+const FIT=0.88;                   // 最坏视角下占用舞台的比例
+function projExtent(rx,ry){
+  const rad=d=>d*Math.PI/180;
+  const cx=Math.cos(rad(rx)),sx=Math.sin(rad(rx));
+  const cy=Math.cos(rad(ry)),sy=Math.sin(rad(ry));
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  for(let i=0;i<8;i++){
+    const px=(i&1)?0.5:-0.5, py=(i&2)?0.5:-0.5, pz=(i&4)?0.5:-0.5;
+    const ax=px*cy+pz*sy, az=-px*sy+pz*cy;      // rotateY
+    const by=py*cx-az*sx, bz=py*sx+az*cx;       // rotateX
+    const k=PERSP/(PERSP-bz);                   // 透视
+    const X=ax*k, Y=by*k;
+    if(X<x0)x0=X; if(X>x1)x1=X;
+    if(Y<y0)y0=Y; if(Y>y1)y1=Y;
   }
-  return any?{w:mxx-mnx,h:mxy-mny,cx:(mnx+mxx)/2,cy:(mny+mxy)/2}:null;
+  return {w:x1-x0,h:y1-y0};
+}
+let WORST=null;
+function worstExtent(){
+  if(WORST)return WORST;
+  let w=0,h=0;
+  for(let rx=-RX_LIMIT;rx<=RX_LIMIT;rx+=5){
+    for(let ry=0;ry<360;ry+=5){
+      const e=projExtent(rx,ry);
+      if(e.w>w)w=e.w;
+      if(e.h>h)h=e.h;
+    }
+  }
+  WORST={w:w,h:h};
+  return WORST;
 }
 function fitToStage(){
   const st=stage.getBoundingClientRect();
-  const b=contentBox();
-  if(!b||b.w<2||b.h<2)return {sc:1,ax:0,ay:0};
-  const sc=Math.max(0.15,Math.min(2.5,Math.min(st.width*0.80/b.w,st.height*0.80/b.h)));
-  const sx=st.left+st.width/2, sy=st.top+st.height/2;
-  return {sc,ax:(sx-b.cx)*sc,ay:(sy-b.cy)*sc};
+  if(!st.width||!st.height)return {sc:1,ax:0,ay:0};
+  const we=worstExtent();
+  const sc=Math.max(0.05,Math.min(3,Math.min(
+    st.width*FIT/(we.w*SIZE), st.height*FIT/(we.h*SIZE))));
+  return {sc,ax:0,ay:0};   // 立方体几何上以原点为中心，无需平移补偿
 }
 function paint(){
   for(const p of PIECES)for(const s2 of p.stks)
@@ -398,11 +435,21 @@ function applyView(){
     +'rotateX('+S.rx+'deg) rotateY('+S.ry+'deg) scale3d('+sc+','+sc+','+sc+')';
 }
 function rebuild(){
-  S.fit={sc:1,ax:0,ay:0};
+  layoutStage();
   buildCube();
-  applyView();
   S.fit=fitToStage();
   applyView();
+}
+/* 舞台可用高度 = wrap 高 - 两行控件 - 行距（实测，不写死像素） */
+function layoutStage(){
+  const wrap=document.querySelector('.wrap');
+  const seg=document.getElementById('kindSeg'), tl=document.querySelector('.tools');
+  const wrapH=wrap.clientHeight;
+  if(!wrapH)return;
+  const land=matchMedia('(orientation:landscape) and (max-height:560px)').matches;
+  const gaps=14;   // .wrap 的 2 个 gap（7px）
+  const avail=Math.max(150,wrapH-(land?0:(seg?seg.offsetHeight:0)+(tl?tl.offsetHeight:0)+gaps)-4);
+  document.documentElement.style.setProperty('--stageMax',avail+'px');
 }
 const AXV={x:[1,0,0],y:[0,1,0],z:[0,0,1]};
 function abortAnim(){
@@ -425,7 +472,7 @@ function animTurn(m,ms,cb,token){
   });
   for(const p of sel)pivot.appendChild(p.el);
   setHover(null);
-  pivot.classList.add('turning');   // 用 class 控制高光，禁止用 filter（会扁平化 3D 层级）
+  pivot.classList.add('turning');
   const axis=m.ax==='x'?'rotateX':m.ax==='y'?'rotateY':'rotateZ';
   // 旋向必须与 remapPieces 的落点变换同号，否则动画方向与结果相反
   const sign=(m.ax==='x')?1:-1;
@@ -447,9 +494,8 @@ function animTurn(m,ms,cb,token){
       for(const p of sel)world.appendChild(p.el);
       pivot.remove();
       remapPieces(m);
-      paint();
       S.busy=false;
-      if(S.pendingFit){S.pendingFit=false;S.fit=fitToStage();applyView();}
+      if(S.pendingFit){S.pendingFit=false;rebuild();}
       if(cb)cb();
     }
   }
@@ -458,6 +504,7 @@ function animTurn(m,ms,cb,token){
 function remapPieces(m){
   const k=curKind();
   const N=k.N,off=(N-1)/2;
+  const moved=[];
   for(const p of PIECES){
     const inLayer=(m.ax==='x'&&p.x===m.L)||(m.ax==='y'&&p.y===m.L)||(m.ax==='z'&&p.z===m.L);
     if(!inLayer)continue;
@@ -468,13 +515,15 @@ function remapPieces(m){
     else { if(m.d===1){na=b;nb=-a;} else {na=-b;nb=a;} }
     p.x=Math.round(na+off);p.y=Math.round(nb+off);p.z=Math.round(nc+off);
     p.el.style.transform='translate3d('+((p.x-off)*CELL)+'px,'+((p.y-off)*CELL)+'px,'+((p.z-off)*CELL)+'px)';
+    moved.push(p);
   }
-  rebuildStickers();
+  // 只重排动过的方块；否则每次转层都要 remove+重建全部贴纸，整盘会闪
+  rebuildStickers(moved);
 }
-function rebuildStickers(){
+function rebuildStickers(list){
   const k=curKind();
   const N=k.N;
-  for(const p of PIECES){
+  for(const p of (list||PIECES)){
     for(const s2 of p.stks)s2.el.remove();   // 仅移除贴纸，实体外壳保留
     p.stks.length=0;
     const h=CELL/2;
@@ -750,12 +799,16 @@ function boot(){
   document.getElementById('sndBtn').onclick=()=>{setSnd(!SND);if(SND)SFX.click();};
   document.getElementById('mkOk').onclick=hideMask;
   let raf=0;
+  // 定标与视角无关，resize 直接重建即可
   window.addEventListener('resize',()=>{
     cancelAnimationFrame(raf);
     raf=requestAnimationFrame(()=>{
-      if(!S.busy){S.pendingFit=false;rebuild();}
+      if(!S.busy)rebuild();
       else S.pendingFit=true;   // 转动中先挂起，结束后补偿
     });
+  });
+  window.addEventListener('orientationchange',()=>{
+    setTimeout(()=>{if(!S.busy)rebuild();else S.pendingFit=true;},120);
   });
   if(restored&&isSolvedState()&&S.moves>0)S.done=true;
 }
