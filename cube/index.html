@@ -51,22 +51,19 @@ body{background:var(--paper);color:var(--ink);
 .stage.drag{cursor:grabbing}
 .stage.onpiece{cursor:grab}
 .scene{position:absolute;inset:0;perspective:1300px;perspective-origin:50% 47%;z-index:1}
-.world{position:absolute;left:50%;top:50%;transform-style:preserve-3d;will-change:transform}
+.world{position:absolute;left:50%;top:50%;transform-style:preserve-3d}
 .piece,.pivot{position:absolute;transform-style:preserve-3d}
 
-/* 方块实体：哑光深色塑料，圆角 */
-.bodyf{position:absolute;backface-visibility:hidden;  /* 剔除背面，避免内侧面从缝隙透出 */
-  background:linear-gradient(160deg,#4a4038,#332c26 72%);
-  border-radius:9%;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+/* 方块实体：哑光深色塑料。贴纸是它的 flat 子元素，与面同面绘制，
+   不再作为独立 3D 层参与排序 —— 贴纸与自己的实体面永远不可能互相盖错 */
+.bodyf{position:absolute;backface-visibility:hidden;
+  background:#3b332b;border-radius:9%}
 
-/* 贴纸：内缩露出实体形成真实缝隙 + 塑料反光 */
+/* 贴纸：内缩露出实体形成真实缝隙 + 塑料反光（不用混合模式，降低合成负担） */
 /* --ring 做高亮：不用 filter，避免新建合成层 */
-.st{--ring:0px;position:absolute;backface-visibility:hidden;border-radius:12%;
-  background-image:
-    linear-gradient(148deg,rgba(255,255,255,.4) 0%,rgba(255,255,255,.11) 30%,
-      rgba(255,255,255,0) 52%,rgba(0,0,0,.09) 82%,rgba(0,0,0,.18) 100%);
-  background-blend-mode:soft-light;
+.st{--ring:0px;position:absolute;border-radius:12%;
+  background-image:linear-gradient(148deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.06) 30%,
+      rgba(255,255,255,0) 52%,rgba(0,0,0,.04) 82%,rgba(0,0,0,.10) 100%);
   box-shadow:
     inset 0 0 0 var(--ring) rgba(255,255,255,.62),
     inset 0 0 0 1px rgba(255,255,255,.22),
@@ -316,26 +313,28 @@ function cubeFit(){
   const w=stage.clientWidth||340,h=stage.clientHeight||340;
   return Math.min(w,h)*0.62;
 }
-/* 方块外壳：6 个深色面围成闭合盒体，杜绝转动穿模 */
+/* 方块外壳：6 个深色面围成闭合盒体，杜绝转动穿模；按 U D F B L R 顺序返回 */
 function addBody(el,C){
-  // 实体面必须比贴纸更靠内，否则与贴纸共面争用深度（黑面会盖住彩色）
+  // 面与面之间留 2×gap，相邻方块的盒体才不会互相穿插
   const h=C/2-Math.max(1.2,C*0.022), S=C*0.97, m=(C-S)/2, T=[
     'rotateX(90deg) translateZ('+h+'px)','rotateX(-90deg) translateZ('+h+'px)',
     'translateZ('+h+'px)','rotateY(180deg) translateZ('+h+'px)',
     'rotateY(-90deg) translateZ('+h+'px)','rotateY(90deg) translateZ('+h+'px)'];
+  const faces=[];
   for(const t of T){
     const d=document.createElement('div');
     d.className='bodyf';
     d.style.width=S+'px';d.style.height=S+'px';
     d.style.marginLeft=m+'px';d.style.marginTop=m+'px';
     d.style.transform=t;
-    el.appendChild(d);
+    el.appendChild(d);faces.push(d);
   }
+  return faces;
 }
-const FACE_S=0.93;
+const FACE_S=0.93,BODY_S=0.97;
 function stickerGeo(C){
-  const S=C*FACE_S, m=(C-S)/2;
-  return {S,m,h:C/2};
+  const S=C*FACE_S;
+  return {S,m:(C*BODY_S-S)/2};
 }
 function buildCube(){
   const k=curKind(),N=k.N;
@@ -350,28 +349,26 @@ function buildCube(){
     el.className='piece';
     el.style.width=CELL+'px';el.style.height=CELL+'px';
     el.style.marginLeft=(-CELL/2)+'px';el.style.marginTop=(-CELL/2)+'px';
-    addBody(el,CELL);   // 实体外壳，避免转动时看穿内部
+    const bf=addBody(el,CELL);   // 实体外壳，避免转动时看穿内部
     el.style.transform='translate3d('+((x-off)*CELL)+'px,'+((y-off)*CELL)+'px,'+((z-off)*CELL)+'px)';
     const stks=[];
-    const h=CELL/2;
     const sg=stickerGeo(CELL);
-    const mk=(face,cellIdx,tf)=>{
+    const mk=(face,cellIdx)=>{
       const d=document.createElement('div');
       d.className='st';
       d.style.width=sg.S+'px';d.style.height=sg.S+'px';
       d.style.marginLeft=sg.m+'px';d.style.marginTop=sg.m+'px';
-      d.style.transform=tf;
       d.dataset.f=face;d.dataset.i=cellIdx;
-      el.appendChild(d);stks.push({el:d,face,idx:cellIdx});
+      bf[face].appendChild(d);stks.push({el:d,face,idx:cellIdx});
     };
-    if(y===0)   mk(U,x+z*N,       'rotateX(90deg) translateZ('+h+'px)');
-    if(y===N-1) mk(D,x+(N-1-z)*N, 'rotateX(-90deg) translateZ('+h+'px)');
-    if(z===N-1) mk(F,x+y*N,       'translateZ('+h+'px)');
-    if(z===0)   mk(B,(N-1-x)+y*N, 'rotateY(180deg) translateZ('+h+'px)');
-    if(x===0)   mk(L,z+y*N,       'rotateY(-90deg) translateZ('+h+'px)');
-    if(x===N-1) mk(R,(N-1-z)+y*N, 'rotateY(90deg) translateZ('+h+'px)');
+    if(y===0)   mk(U,x+z*N);
+    if(y===N-1) mk(D,x+(N-1-z)*N);
+    if(z===N-1) mk(F,x+y*N);
+    if(z===0)   mk(B,(N-1-x)+y*N);
+    if(x===0)   mk(L,z+y*N);
+    if(x===N-1) mk(R,(N-1-z)+y*N);
     world.appendChild(el);
-    PIECES.push({el,x,y,z,stks});
+    PIECES.push({el,x,y,z,stks,bf});
   }
   paint();
 }
@@ -517,26 +514,24 @@ function rebuildStickers(list){
   const k=curKind();
   const N=k.N;
   for(const p of (list||PIECES)){
-    for(const s2 of p.stks)s2.el.remove();   // 仅移除贴纸，实体外壳保留
+    for(const s2 of p.stks)s2.el.remove();
     p.stks.length=0;
-    const h=CELL/2;
     const sg=stickerGeo(CELL);
-    const mk=(face,cellIdx,tf)=>{
+    const mk=(face,cellIdx)=>{
       const d=document.createElement('div');
       d.className='st';
       d.style.width=sg.S+'px';d.style.height=sg.S+'px';
       d.style.marginLeft=sg.m+'px';d.style.marginTop=sg.m+'px';
-      d.style.transform=tf;
       d.dataset.f=face;d.dataset.i=cellIdx;
-      p.el.appendChild(d);p.stks.push({el:d,face,idx:cellIdx});
+      p.bf[face].appendChild(d);p.stks.push({el:d,face,idx:cellIdx});
     };
     const {x,y,z}=p;
-    if(y===0)   mk(U,x+z*N,       'rotateX(90deg) translateZ('+h+'px)');
-    if(y===N-1) mk(D,x+(N-1-z)*N, 'rotateX(-90deg) translateZ('+h+'px)');
-    if(z===N-1) mk(F,x+y*N,       'translateZ('+h+'px)');
-    if(z===0)   mk(B,(N-1-x)+y*N, 'rotateY(180deg) translateZ('+h+'px)');
-    if(x===0)   mk(L,z+y*N,       'rotateY(-90deg) translateZ('+h+'px)');
-    if(x===N-1) mk(R,(N-1-z)+y*N, 'rotateY(90deg) translateZ('+h+'px)');
+    if(y===0)   mk(U,x+z*N);
+    if(y===N-1) mk(D,x+(N-1-z)*N);
+    if(z===N-1) mk(F,x+y*N);
+    if(z===0)   mk(B,(N-1-x)+y*N);
+    if(x===0)   mk(L,z+y*N);
+    if(x===N-1) mk(R,(N-1-z)+y*N);
   }
   paint();
 }
