@@ -14,7 +14,7 @@
   --accent:#1f6f8b; --bad:#c0463c; --good:#2e7d5b; --radius:10px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;min-height:100%}
+html,body{margin:0;height:100%;overflow:hidden}
 body{
   background:var(--paper); color:var(--ink);
   font-family:"Kaiti SC","STKaiti",KaiTi,"Noto Serif SC","Songti SC",Georgia,"Times New Roman",serif;
@@ -22,7 +22,14 @@ body{
   padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom));
   overscroll-behavior:none; touch-action:manipulation;
 }
-.wrap{width:100%;max-width:470px;display:flex;flex-direction:column;gap:7px}
+.wrap{width:100%;max-width:470px;display:flex;flex-direction:column;gap:7px;min-height:0;flex:none}
+@media (orientation:landscape) and (max-height:560px){
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) var(--bmax,60vh);
+    grid-template-rows:none;gap:7px 12px;align-content:center;align-items:center;
+    width:100%;max-width:none}
+  .wrap>*{grid-column:1;min-width:0}
+  .board-box,.frame{grid-column:2;grid-row:1/span 20}
+}
 .seg{display:flex;background:var(--paper2);border:1px solid var(--line);
   border-radius:var(--radius);padding:3px;gap:3px}
 .seg button{flex:1;border:none;background:transparent;border-radius:7px;
@@ -55,7 +62,8 @@ button.snd[aria-checked="true"] .sndTr{background:var(--good);
   box-shadow:inset 0 1px 2px rgba(20,60,42,.3)}
 button.snd[aria-checked="true"] .sndTr::after{transform:translateX(14px)}
 
-.frame{width:min(100%,min(62vh,520px));aspect-ratio:1;margin:0 auto;position:relative;
+.frame{width:min(100%,min(var(--bmax,62vh),520px));aspect-ratio:1;flex:none;
+  margin:0 auto;position:relative;
   border-radius:12px;padding:3.1%;
   background:
     repeating-linear-gradient(93deg,rgba(146,108,54,.06) 0 1px,rgba(255,255,255,0) 1px 5px),
@@ -74,7 +82,7 @@ button.snd[aria-checked="true"] .sndTr::after{transform:translateX(14px)}
     0 4px 7px rgba(47,38,24,.22),
     0 10px 22px rgba(47,38,24,.2),
     0 20px 40px rgba(47,38,24,.12);
-  touch-action:manipulation}
+  touch-action:none}
 .pit{position:absolute;inset:3.1%;border-radius:8px;overflow:hidden;
   background:
     radial-gradient(130% 110% at 22% 12%,rgba(255,244,214,.24),rgba(255,244,214,0) 58%),
@@ -706,8 +714,36 @@ function boot(){
   hideMask();
   rebuildTiles();
   setButtons();
+  fitBoardSoon();
   bindUI();
 }
+
+const LAND='(orientation:landscape) and (max-height:560px)';
+function fitBoard(){
+  const w=document.querySelector('.wrap');if(!w)return;
+  const b=w.querySelector('.board-box,.frame');if(!b)return;
+  const cs=getComputedStyle(document.body);
+  const avail=document.documentElement.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  let h=avail;
+  if(!window.matchMedia(LAND).matches){
+    const ws=getComputedStyle(w);
+    let chrome=0;
+    for(const el of w.children){
+      if(el===b||el.contains(b))continue;
+      chrome+=el.getBoundingClientRect().height;
+    }
+    chrome+=(parseFloat(ws.rowGap)||0)*(w.children.length-1);
+    h=avail-chrome;
+  }
+  document.documentElement.style.setProperty('--bmax',Math.max(140,h)+'px');
+}
+function fitBoardSoon(){
+  let n=0;
+  (function step(){fitBoard();if(++n<6)requestAnimationFrame(step);})();
+  setTimeout(fitBoard,260);
+}
+window.addEventListener('resize',fitBoardSoon);
+window.addEventListener('orientationchange',()=>setTimeout(fitBoardSoon,120));
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
 else boot();
