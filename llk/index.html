@@ -15,7 +15,7 @@
   --good:#2e7d5b; --gold:#b08422; --radius:10px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow-x:hidden}
+html,body{margin:0;height:100%;overflow:hidden}
 body{
   background:var(--paper); color:var(--ink);
   font-family:"Kaiti SC","STKaiti",KaiTi,"Noto Serif SC","Songti SC",Georgia,"Times New Roman",serif;
@@ -23,7 +23,14 @@ body{
   padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));
   overscroll-behavior:none; touch-action:manipulation;
 }
-.wrap{width:100%;max-width:560px;display:flex;flex-direction:column;gap:9px}
+.wrap{width:100%;max-width:560px;display:flex;flex-direction:column;gap:9px;min-height:0;flex:none}
+@media (orientation:landscape) and (max-height:560px){
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) var(--bmax,60vh);
+    grid-template-rows:none;gap:7px 12px;align-content:center;align-items:center;
+    width:100%;max-width:none}
+  .wrap>*{grid-column:1;min-width:0}
+  .board-box,.frame{grid-column:2;grid-row:1/span 20}
+}
 .seg{display:flex;background:var(--paper2);border:1px solid var(--line);
   border-radius:var(--radius);padding:3px;gap:3px}
 .seg button{flex:1;border:none;background:transparent;border-radius:7px;
@@ -52,8 +59,9 @@ body{
 .tools button.snd[aria-checked="true"] .sndTr{background:var(--good)}
 .tools button.snd[aria-checked="true"] .sndTr::after{transform:translateX(14px)}
 
-.board-box{position:relative;width:100%;border-radius:8px;background:var(--paper2);
-  border:1px solid var(--line);padding:6px;box-shadow:0 2px 10px rgba(47,42,36,.08)}
+.board-box{position:relative;width:min(100%,var(--bmax,100vh));flex:none;margin:0 auto;
+  border-radius:8px;background:var(--paper2);border:1px solid var(--line);padding:6px;
+  box-shadow:0 2px 10px rgba(47,42,36,.08);touch-action:none}
 .grid{position:relative;width:100%}
 .tile{position:absolute;display:flex;align-items:center;justify-content:center;
   border-radius:7px;cursor:pointer;user-select:none;color:var(--ink);
@@ -405,7 +413,11 @@ function buildGrid(){
 function layout(){
   const b=S.board;
   const w=gridEl.clientWidth||560;
-  const maxH=Math.max(240,(window.innerHeight||700)*0.62);
+  const bb=$('boardBox'),bcs=getComputedStyle(bb);
+  const cap=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bmax'))||0;
+  const inner=cap-(parseFloat(bcs.paddingTop)+parseFloat(bcs.paddingBottom)
+    +parseFloat(bcs.borderTopWidth)+parseFloat(bcs.borderBottomWidth));
+  const maxH=cap>0?Math.max(180,inner):Math.max(240,(window.innerHeight||700)*0.62);
   let cw=w/b.cols;
   let ch=maxH/b.rows;
   let s=Math.min(cw,ch);
@@ -771,7 +783,35 @@ window.addEventListener('beforeunload',e=>{
   return '';
 });
 
+const LAND='(orientation:landscape) and (max-height:560px)';
+function fitBoard(){
+  const w=document.querySelector('.wrap');if(!w)return;
+  const b=w.querySelector('.board-box,.frame');if(!b)return;
+  const cs=getComputedStyle(document.body);
+  const avail=document.documentElement.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  let h=avail;
+  if(!window.matchMedia(LAND).matches){
+    const ws=getComputedStyle(w);
+    let chrome=0;
+    for(const el of w.children){
+      if(el===b||el.contains(b))continue;
+      chrome+=el.getBoundingClientRect().height;
+    }
+    chrome+=(parseFloat(ws.rowGap)||0)*(w.children.length-1);
+    h=avail-chrome;
+  }
+  document.documentElement.style.setProperty('--bmax',Math.max(140,h)+'px');
+}
+function fitBoardSoon(){
+  let n=0;
+  (function step(){fitBoard();if(++n<6)requestAnimationFrame(step);})();
+  setTimeout(fitBoard,260);
+}
+window.addEventListener('resize',fitBoardSoon);
+window.addEventListener('orientationchange',()=>setTimeout(fitBoardSoon,120));
+
 newGame(TIERS[0]);
+fitBoardSoon();
 </script>
 </body>
 </html>
