@@ -60,10 +60,16 @@ body{background:var(--paper);color:var(--ink);
 .bodyf{position:absolute;backface-visibility:hidden;
   background:#3b332b;border-radius:9%}
 
+/* 内壁：把所有「朝内」的实体面按层合并成整体面。深色与实体面一致，
+   即使与转层中方块的内部面共面相争也看不出变化 */
+.inr{position:absolute;backface-visibility:hidden;background:#3b332b}
+
 /* 贴纸：内缩露出实体形成真实缝隙 + 塑料反光（不用混合模式，降低合成负担） */
 /* --ring 做高亮：不用 filter，避免新建合成层 */
 .st{--ring:0px;position:absolute;border-radius:12%;
-  background-image:linear-gradient(148deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.06) 30%,
+  background-image:
+    radial-gradient(ellipse 21% 12% at 30% 16%,rgba(255,255,255,.5),rgba(255,255,255,0) 72%),
+    linear-gradient(148deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.06) 30%,
       rgba(255,255,255,0) 52%,rgba(0,0,0,.04) 82%,rgba(0,0,0,.10) 100%);
   box-shadow:
     inset 0 0 0 var(--ring) rgba(255,255,255,.62),
@@ -71,10 +77,6 @@ body{background:var(--paper);color:var(--ink);
     inset 0 1.5px 1px -0.5px rgba(255,255,255,.6),
     inset 0 -2px 2px -1px rgba(0,0,0,.22),
     0 1px 2px rgba(47,42,36,.22)}
-.st::after{content:'';position:absolute;left:12%;top:8%;width:42%;height:23%;
-  border-radius:50%;pointer-events:none;
-  background:radial-gradient(ellipse at 44% 40%,rgba(255,255,255,.5),rgba(255,255,255,0) 70%);
-  transform:rotate(-13deg)}
 
 .st.hv{--ring:2.5px}
 .turning .st{--ring:2px}
@@ -314,28 +316,68 @@ function cubeFit(){
   const w=stage.clientWidth||340,h=stage.clientHeight||340;
   return Math.min(w,h)*0.62;
 }
-/* 方块外壳：6 个深色面围成闭合盒体，杜绝转动穿模；按 U D F B L R 顺序返回 */
-function addBody(el,C){
-  // 面与面之间留 2×gap，相邻方块的盒体才不会互相穿插
-  const h=C/2-Math.max(1.2,C*0.022), S=C*0.97, m=(C-S)/2, T=[
+/* 方块外壳：只建朝外的面（与贴纸一一对应，按 U D F B L R 索引）。
+   朝内的面统一由 buildCore 的整体内壁承担 —— 参与 3D 排序的元素
+   从 6×方块数 降到 方块外表面数 + 内壁数 */
+function addFace(el,f){
+  const h=CELL/2-Math.max(1.2,CELL*0.022), S=CELL*0.97, m=(CELL-S)/2, T=[
     'rotateX(90deg) translateZ('+h+'px)','rotateX(-90deg) translateZ('+h+'px)',
     'translateZ('+h+'px)','rotateY(180deg) translateZ('+h+'px)',
     'rotateY(-90deg) translateZ('+h+'px)','rotateY(90deg) translateZ('+h+'px)'];
+  const d=document.createElement('div');
+  d.className='bodyf';
+  d.style.width=S+'px';d.style.height=S+'px';
+  d.style.marginLeft=m+'px';d.style.marginTop=m+'px';
+  d.style.transform=T[f];
+  el.appendChild(d);
+  return d;
+}
+function addBody(el,outer){
   const faces=[];
-  for(const t of T){
-    const d=document.createElement('div');
-    d.className='bodyf';
-    d.style.width=S+'px';d.style.height=S+'px';
-    d.style.marginLeft=m+'px';d.style.marginTop=m+'px';
-    d.style.transform=t;
-    el.appendChild(d);faces.push(d);
+  for(const f of [U,D,F,B,L,R]){
+    if(outer[f])faces[f]=addFace(el,f);
   }
   return faces;
+}
+/* 落位补偿：转层后台块的朝外面组合会变（如顶角转到底角要 D 不要 U），
+   按新槽位增删实体面。补面/缺口露出的都是同色内壁，视觉无感 */
+function syncFaces(p){
+  const N=curKind().N, outer=[];
+  outer[U]=p.y===0;outer[D]=p.y===N-1;outer[F]=p.z===N-1;
+  outer[B]=p.z===0;outer[L]=p.x===0;outer[R]=p.x===N-1;
+  for(const f of [U,D,F,B,L,R]){
+    if(outer[f]&&!p.bf[f])p.bf[f]=addFace(p.el,f);
+    else if(!outer[f]&&p.bf[f]){p.bf[f].remove();p.bf[f]=null;}
+  }
 }
 const FACE_S=0.93,BODY_S=0.97;
 function stickerGeo(C){
   const S=C*FACE_S;
   return {S,m:(C*BODY_S-S)/2};
+}
+/* 内壁：把所有「朝内」的实体面按层合并成整体面（每朝向 N-2 张）。
+   最靠内的两张里，朝外那张是外表面（方块自身已建）、朝内那张永远被更近的
+   内壁挡住，都可以省略。内盒半边长 = CELL/2-gap，比转层方块的内缘小一个
+   gap，转层时永远碰不到 */
+function buildCore(N,off){
+  const h=CELL/2-Math.max(1.2,CELL*0.022), g=CELL/2-h;
+  const W=SIZE-2*g-2;   // 比外表面再缩 1px，杜绝内壁从棱边伸出
+  const ORI=[[-1,'rotateX(90deg)'],[1,'rotateX(-90deg)'],[1,''],
+    [-1,'rotateY(180deg)'],[-1,'rotateY(-90deg)'],[1,'rotateY(90deg)']];
+  const frag=document.createDocumentFragment();
+  for(const [s,rot] of ORI){
+    // 每个朝向铺满除自身最外层外的所有层：s=-1 的最外层是 0，s=+1 是 N-1。
+    // 这样最外侧缝隙通道的顶/底也被封死，近水平视线不会从缝里看穿
+    for(let L2=(s<0?1:0);L2<=(s<0?N-1:N-2);L2++){
+      const d=document.createElement('div');
+      d.className='inr';
+      d.style.width=W+'px';d.style.height=W+'px';
+      d.style.marginLeft=(-W/2)+'px';d.style.marginTop=(-W/2)+'px';
+      d.style.transform=(rot?rot+' ':'')+'translateZ('+(s*(L2-off)*CELL+h)+'px)';
+      frag.appendChild(d);
+    }
+  }
+  world.appendChild(frag);
 }
 function buildCube(){
   const k=curKind(),N=k.N;
@@ -343,6 +385,8 @@ function buildCube(){
   SIZE=cubeFit();
   CELL=SIZE/N;
   const off=(N-1)/2;
+  buildCore(N,off);
+  const frag=document.createDocumentFragment();
   for(let x=0;x<N;x++)for(let y=0;y<N;y++)for(let z=0;z<N;z++){
     const onEdge=(x===0||x===N-1||y===0||y===N-1||z===0||z===N-1);
     if(!onEdge)continue;
@@ -350,7 +394,9 @@ function buildCube(){
     el.className='piece';
     el.style.width=CELL+'px';el.style.height=CELL+'px';
     el.style.marginLeft=(-CELL/2)+'px';el.style.marginTop=(-CELL/2)+'px';
-    const bf=addBody(el,CELL);   // 实体外壳，避免转动时看穿内部
+    const outer=[];outer[U]=y===0;outer[D]=y===N-1;outer[F]=z===N-1;
+    outer[B]=z===0;outer[L]=x===0;outer[R]=x===N-1;
+    const bf=addBody(el,outer);   // 只建朝外的面；朝内的由内壁承担
     el.style.transform='translate3d('+((x-off)*CELL)+'px,'+((y-off)*CELL)+'px,'+((z-off)*CELL)+'px)';
     const stks=[];
     const sg=stickerGeo(CELL);
@@ -362,15 +408,16 @@ function buildCube(){
       d.dataset.f=face;d.dataset.i=cellIdx;
       bf[face].appendChild(d);stks.push({el:d,face,idx:cellIdx});
     };
-    if(y===0)   mk(U,x+z*N);
-    if(y===N-1) mk(D,x+(N-1-z)*N);
-    if(z===N-1) mk(F,x+y*N);
-    if(z===0)   mk(B,(N-1-x)+y*N);
-    if(x===0)   mk(L,z+y*N);
-    if(x===N-1) mk(R,(N-1-z)+y*N);
-    world.appendChild(el);
+    if(outer[U]) mk(U,x+z*N);
+    if(outer[D]) mk(D,x+(N-1-z)*N);
+    if(outer[F]) mk(F,x+y*N);
+    if(outer[B]) mk(B,(N-1-x)+y*N);
+    if(outer[L]) mk(L,z+y*N);
+    if(outer[R]) mk(R,(N-1-z)+y*N);
+    frag.appendChild(el);
     PIECES.push({el,x,y,z,stks,bf});
   }
+  world.appendChild(frag);
   paint();
 }
 /* 视角无关定标：按最坏视角的投影包围盒定标，故缩放不随视角变化，也不会滑出画布 */
@@ -508,6 +555,7 @@ function remapPieces(m){
     p.el.style.transform='translate3d('+((p.x-off)*CELL)+'px,'+((p.y-off)*CELL)+'px,'+((p.z-off)*CELL)+'px)';
     moved.push(p);
   }
+  for(const p of moved)syncFaces(p);   // 落位补偿：补齐/裁掉朝外面
   // 只重排动过的方块；否则每次转层都要 remove+重建全部贴纸，整盘会闪
   rebuildStickers(moved);
 }
