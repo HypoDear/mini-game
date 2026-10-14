@@ -51,7 +51,8 @@ body{background:var(--paper);color:var(--ink);
 .stage.drag{cursor:grabbing}
 .stage.onpiece{cursor:grab}
 .scene{position:absolute;inset:0;perspective:1300px;perspective-origin:50% 47%;z-index:1}
-.world{position:absolute;left:50%;top:50%;transform-style:preserve-3d}
+.world{position:absolute;left:50%;top:50%;transform-style:preserve-3d;
+  will-change:transform}
 .piece,.pivot{position:absolute;transform-style:preserve-3d}
 
 /* 方块实体：哑光深色塑料。贴纸是它的 flat 子元素，与面同面绘制，
@@ -467,7 +468,7 @@ function animTurn(m,ms,cb,token){
   // 旋向必须与 remapPieces 的落点变换同号，否则动画方向与结果相反
   const sign=(m.ax==='x')?1:-1;
   const target=90*m.d*sign;
-  const reclaim=()=>{while(pivot.firstChild)world.appendChild(pivot.firstChild);pivot.remove();};
+  const reclaim=()=>{while(pivot.firstChild)world.appendChild(pv.firstChild);pivot.remove();};
   const t0=performance.now();
   if(token===undefined){token=S.gen;}
   S.busy=true;
