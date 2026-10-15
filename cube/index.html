@@ -474,7 +474,10 @@ function buildCube(){
 }
 /* 视角无关定标：按最坏视角的投影包围盒定标，故缩放不随视角变化，也不会滑出画布 */
 const PERSP=1300;                 // 必须与 .scene 的 perspective 一致
-const RX_LIMIT=85;                // 与拖拽时的 rx 夹取范围一致
+/* 定标用的最坏视角搜索范围。比实际可拖到的 TUNE.rxLimit（89°）略窄：
+   实测 rx 85→89 的投影包围盒完全一致（w≈1.4148 / h≈1.7320），
+   多搜这 4° 不改变结果，保持原值以免无谓增大搜索量 */
+const RX_LIMIT=85;
 const FIT=0.88;                   // 最坏视角下占用舞台的比例
 function projExtent(rx,ry){
   const rad=d=>d*Math.PI/180;
@@ -1030,8 +1033,7 @@ function onDown(e){
   const p=pt(e);
   const stk=hitAt(p.x,p.y);
   drag={x0:p.x,y0:p.y,stk:stk,rx0:S.rx,ry0:S.ry,turned:false,moved:false,
-    touch:e.pointerType==='touch',px:p.x,py:p.y,pt0:performance.now(),
-    multi:false};
+    touch:e.pointerType==='touch',px:p.x,py:p.y,pt0:performance.now()};
   if(stk)stk.classList.add('press');   // C2 触摸/鼠标按下态
   setHover(null);
   stage.classList.add('drag');
