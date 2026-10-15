@@ -176,17 +176,17 @@ button.snd:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 <div class="wrap">
   <div class="seg" id="kindSeg" role="tablist" aria-label="魔方类型"></div>
   <div class="tools">
-    <button id="btnScramble">打乱</button>
-    <button id="btnSolve">复原</button>
+    <button id="btnScramble" aria-label="打乱魔方">打乱</button>
+    <button id="btnSolve" aria-label="回放复原">复原</button>
     <button class="snd on" id="sndBtn" role="switch" aria-checked="true" aria-label="音效开关">
       <span class="sndTx">音效</span><span class="sndTr"><i></i></span>
     </button>
   </div>
-  <div class="stage" id="stage"><div class="scene"><div class="world" id="world"></div></div>
+  <div class="stage" id="stage" role="application" aria-label="魔方，拖动色块转层，拖动空白转视角，方向键转视角"><div class="scene"><div class="world" id="world"></div></div>
     <button class="vhome" id="vHome" title="回正视角（双击空白处亦可）" aria-label="回正视角">⌂</button>
   </div>
 </div>
-<div class="mask" id="mask"><div class="card">
+<div class="mask" id="mask" role="dialog" aria-live="polite" aria-modal="true"><div class="card">
   <h2 id="mkTitle">完成</h2><p id="mkBody"></p>
   <div><button id="mkOk">好</button></div>
 </div></div>
@@ -748,8 +748,19 @@ function randMove(){
   const axs=['x','y','z'];
   return {ax:axs[(Math.random()*3)|0],L:(Math.random()*k.N)|0,d:Math.random()<.5?1:-1};
 }
+/* 与其余游戏一致的「会丢失当前进度」确认：
+   没动过或已复原则直接放行，不打扰 */
+function hasProgress(){
+  if(S.done)return false;
+  return S.moves>0;
+}
+function confirmDiscard(msg){
+  if(!hasProgress())return true;
+  return confirm(msg||'当前进度将丢失，确定继续？');
+}
 function scramble(){
   if(S.busy&&!S.solving)return;
+  if(!confirmDiscard('重新打乱将丢失当前进度，确定继续？'))return;
   abortAnim();
   const k=curKind();
   const n=k.N===3?25:k.N===4?35:45;
@@ -1081,9 +1092,13 @@ function buildSeg(){
     const b=document.createElement('button');
     b.textContent=k.name;b.dataset.id=k.id;
     b.setAttribute('role','tab');
-    if(k.id===S.kind){b.classList.add('on');b.setAttribute('aria-selected','true');}
+    const on=(k.id===S.kind);
+    // 与其余游戏一致：选中/未选中都显式写出，读屏器才能正确播报
+    b.setAttribute('aria-selected',on?'true':'false');
+    if(on)b.classList.add('on');
     b.onclick=()=>{
       if(S.kind===k.id&&!S.solving)return;
+      if(!confirmDiscard('切换阶数将丢失当前进度，确定继续？')){buildSeg();return;}
       abortAnim();
       S.kind=k.id;S.state=freshState();S.undo=[];S.scr=[];S.moves=0;S.done=false;
       S.rx=k.rx;S.ry=k.ry;
