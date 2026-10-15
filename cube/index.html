@@ -50,11 +50,21 @@ body{background:var(--paper);color:var(--ink);
     rgba(120,100,66,.06) 62%,rgba(120,100,66,0) 100%)}
 .stage.drag{cursor:grabbing}
 .stage.onpiece{cursor:grab}
+.vhome{position:absolute;right:7px;top:7px;z-index:4;width:26px;height:26px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  border:1px solid var(--line);border-radius:50%;background:rgba(251,248,241,.86);
+  color:var(--ink-soft);font-size:13px;line-height:1;padding:0;font-family:inherit;
+  transition:color .16s,border-color .16s,background .16s}
+.vhome:hover{color:var(--ink);border-color:#c9bda6;background:var(--paper2)}
+.vhome:active{background:#ece3d2}
+.vhome:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .scene{position:absolute;inset:0;perspective:1300px;perspective-origin:50% 47%;z-index:1}
 .world{position:absolute;left:50%;top:50%;transform-style:preserve-3d;
   will-change:transform}
 .piece,.pivot{position:absolute;transform-style:preserve-3d}
 .pivot.turning{will-change:transform}   /* 转层动画进合成器线程，主线程零重排 */
+/* 跟手拖拽期间只给真正位移的那一层加提升，松手立即撤（避免高阶常驻显存） */
+.pivot.gliding{will-change:transform}
 /* 转层期间内壁沿各自法向微推 4px：打破「转动贴纸面与内壁的精确共面」
    （GPU 在共面瞬间排序翻转 = 偶发黑块）。4px 远小于缝隙可见深度，
    内壁仍封住缝隙，不会看穿 */
@@ -80,6 +90,26 @@ body{background:var(--paper);color:var(--ink);
 
 .st.hv{--ring:2.5px}
 .turning .st{--ring:2px}
+/* C1 整层高亮：锁定转轴后，整层贴纸描边提亮，明确「这一拖会带动哪一层」 */
+.pivot.gliding .st{--ring:2.6px}
+.pivot.gliding .st{box-shadow:
+  inset 0 0 0 var(--ring) rgba(255,255,255,.62),
+  inset 0 0 0 1px rgba(0,0,0,.16),
+  0 1px 1px rgba(0,0,0,.28)}
+/* C2 触摸按下态：手指落在贴纸上立刻给反馈，不必等到触发转层 */
+.st.press{--ring:3px;filter:brightness(1.13)}
+/* B2 视角回正/预设的缓动（仅回正时挂上，平时不影响跟手） */
+.world.vtween{transition:transform .26s cubic-bezier(.22,.61,.36,1)}
+/* C3 完成庆祝：整体轻微呼吸 + 各面依次泛光 */
+@keyframes winBreath{
+  0%{transform:scale(1)}28%{transform:scale(1.055)}
+  58%{transform:scale(.988)}100%{transform:scale(1)}}
+.world.win{animation:winBreath .72s cubic-bezier(.3,.7,.3,1)}
+@keyframes winGlow{
+  0%{box-shadow:inset 0 0 0 0 rgba(255,255,255,.4),inset 0 0 0 1px rgba(0,0,0,.16),0 1px 1px rgba(0,0,0,.28)}
+  40%{box-shadow:inset 0 0 0 3px rgba(255,255,255,.95),inset 0 0 0 1px rgba(0,0,0,.1),0 0 12px rgba(255,255,255,.55)}
+  100%{box-shadow:inset 0 0 0 0 rgba(255,255,255,.4),inset 0 0 0 1px rgba(0,0,0,.16),0 1px 1px rgba(0,0,0,.28)}}
+.st.glow{animation:winGlow .52s ease-out}
 
 /* 操作行：三钮同排等高（对齐象棋 29px） */
 .tools{display:flex;gap:6px;align-items:stretch}
@@ -112,7 +142,7 @@ button.snd:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   background:rgba(47,42,36,.4);z-index:40;padding:22px}
 .mask.show{display:flex;animation:fade .2s ease}
 @keyframes fade{from{opacity:0}to{opacity:1}}
-.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius,10px);
+.card{background:var(--paper);border:1px solid var(--line);border-radius:10px;
   padding:24px 22px;max-width:320px;width:100%;text-align:center;
   box-shadow:0 18px 40px -20px rgba(47,42,36,.65)}
 .card h2{margin:0 0 10px;font-size:20px;letter-spacing:3px;color:var(--ink)}
@@ -135,7 +165,9 @@ button.snd:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
     gap:7px 12px;align-content:center;align-items:center;max-width:none}
   .wrap>*{grid-column:1;min-width:0;width:100%;max-width:330px;
     margin-left:auto;margin-right:auto}
-  .stage{grid-column:2;grid-row:1/span 2;aspect-ratio:1/1.06;width:100%;max-width:none}
+  /* 与基础规则同一系数，否则 1.06 的宽高比会把高度撑出可用区 */
+  .stage{grid-column:2;grid-row:1/span 2;aspect-ratio:1/1.06;
+    width:min(100%,calc(var(--stageMax,60vh)*0.9434));max-width:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
 </style>
@@ -150,7 +182,9 @@ button.snd:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
       <span class="sndTx">音效</span><span class="sndTr"><i></i></span>
     </button>
   </div>
-  <div class="stage" id="stage"><div class="scene"><div class="world" id="world"></div></div></div>
+  <div class="stage" id="stage"><div class="scene"><div class="world" id="world"></div></div>
+    <button class="vhome" id="vHome" title="回正视角（双击空白处亦可）" aria-label="回正视角">⌂</button>
+  </div>
 </div>
 <div class="mask" id="mask"><div class="card">
   <h2 id="mkTitle">完成</h2><p id="mkBody"></p>
@@ -166,6 +200,18 @@ function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
 let AC=null,SND=lsGet(KEY_SND)!=='0';
 function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
   if(AC&&AC.state==='suspended'){try{AC.resume();}catch(e){}}return AC}
+/* F4 音频解锁：移动端要求用户手势内创建并启动，否则首次转动的咔啦声会哑掉或延迟。
+   首个 pointerdown 时建好 AudioContext 并推一帧静音缓冲走通输出链路 */
+let AUNLOCK=false;
+function unlockAudio(){
+  if(AUNLOCK)return;AUNLOCK=true;
+  try{
+    const a=ac();if(!a)return;
+    const b=a.createBuffer(1,1,a.sampleRate);
+    const src=a.createBufferSource();src.buffer=b;
+    src.connect(a.destination);src.start(0);
+  }catch(e){}
+}
 let NBU=null;
 function noiseBuf(a){
   if(NBU&&NBU.sampleRate===a.sampleRate)return NBU;
@@ -219,10 +265,9 @@ function slide(freq,dur,g0,dly,q){
     src.start(t0);src.stop(t0+dur+.05);
   }catch(e){}
 }
-/* 一次转动的「分量」：单层格数越多听感越重 */
-function moveWeight(m){
-  const k=curKind();
-  return k.N===3?0.9:1;
+/* 一次转动的「分量」：三阶格子小、听感略轻 */
+function moveWeight(){
+  return curKind().N===3?0.9:1;
 }
 const PENTA=[1,1.122,1.26,1.498,1.682];
 const BASE=196;
@@ -392,9 +437,11 @@ function buildCube(){
   const off=(N-1)/2;
   buildCore(N,off);
   const frag=document.createDocumentFragment();
+  /* F1：只建表层方块。内部块被外层完全包住，任何视角都看不见，
+     五阶可省去 27 个方块及其实体面，直接降低 3D 排序与合成压力 */
   for(let x=0;x<N;x++)for(let y=0;y<N;y++)for(let z=0;z<N;z++){
     const onEdge=(x===0||x===N-1||y===0||y===N-1||z===0||z===N-1);
-    if(!onEdge)continue;
+    if(!onEdge)continue;   // 内核块不建 DOM
     const el=document.createElement('div');
     el.className='piece';
     el.style.width=CELL+'px';el.style.height=CELL+'px';
@@ -483,6 +530,44 @@ function rebuild(){
   S.fit=fitToStage();
   applyView();
 }
+/* F2 轻量重排：窗口尺寸变化时只更新格子尺寸与各块 transform，
+   不 remove/重建 DOM —— 手机转屏不再整盘闪烁。
+   方块数量只与阶数有关，阶数没变就无需重建 */
+function resizeOnly(){
+  layoutStage();
+  const k=curKind(),N=k.N;
+  const newSize=cubeFit();
+  if(!newSize)return;
+  if(PIECES.length===0){rebuild();return;}
+  SIZE=newSize;CELL=SIZE/N;
+  const off=(N-1)/2;
+  const sg=stickerGeo(CELL);
+  const h=CELL/2-Math.max(1.2,CELL*0.022), bs=CELL*0.97, bm=(CELL-bs)/2;
+  const T=[
+    'rotateX(90deg) translateZ('+h+'px)','rotateX(-90deg) translateZ('+h+'px)',
+    'translateZ('+h+'px)','rotateY(180deg) translateZ('+h+'px)',
+    'rotateY(-90deg) translateZ('+h+'px)','rotateY(90deg) translateZ('+h+'px)'];
+  for(const p of PIECES){
+    p.el.style.width=CELL+'px';p.el.style.height=CELL+'px';
+    p.el.style.marginLeft=(-CELL/2)+'px';p.el.style.marginTop=(-CELL/2)+'px';
+    p.el.style.transform='translate3d('+((p.x-off)*CELL)+'px,'+((p.y-off)*CELL)+'px,'+((p.z-off)*CELL)+'px)';
+    for(let f=0;f<6;f++){
+      const bf=p.bf[f];if(!bf)continue;
+      bf.style.width=bs+'px';bf.style.height=bs+'px';
+      bf.style.marginLeft=bm+'px';bf.style.marginTop=bm+'px';
+      bf.style.transform=T[f];
+    }
+    for(const s2 of p.stks){
+      s2.el.style.width=sg.S+'px';s2.el.style.height=sg.S+'px';
+      s2.el.style.marginLeft=sg.m+'px';s2.el.style.marginTop=sg.m+'px';
+    }
+  }
+  // 内壁与格子尺寸强相关，单独重算（数量少，开销可忽略）
+  for(const el of world.querySelectorAll('.inr'))el.remove();
+  buildCore(N,off);
+  S.fit=fitToStage();
+  applyView();
+}
 /* 舞台可用高度 = wrap 高 - 控件高 - 行距（实测，不写死像素） */
 function layoutStage(){
   const wrap=document.querySelector('.wrap');
@@ -495,33 +580,67 @@ function layoutStage(){
   document.documentElement.style.setProperty('--stageMax',avail+'px');
 }
 const AXV={x:[1,0,0],y:[0,1,0],z:[0,0,1]};
+/* A1 跟手拖拽 / A2 连续转动 / A3 自适应阈值 / A4 候选分离度 的调参集中在此 */
+const TUNE={
+  lockRatioTouch:0.18,   // A3 锁定转轴所需位移 = CELL * 该比例（触摸）
+  lockRatioMouse:0.09,   // A3 鼠标更灵敏
+  lockMinTouch:16, lockMinMouse:8,   // A3 像素下限
+  sep:1.3,               // A4 前两名候选分离度不足则判为意图不明，继续等
+  commit:45,             // A1 松手吸附阈值（度）
+  snapMs:150,            // A1 吸附/回弹基准时长
+  turnMs:190,            // A2 非跟手转动时长（原 320ms 偏慢）
+  viewSens:0.42,
+  inertiaDecay:0.93,     // B3 惯性衰减
+  inertiaMin:0.08,
+  rxLimit:89             // B4 原 85 放宽，便于看全底面
+};
 function abortAnim(){
   S.gen++;
   S.busy=false;S.solving=false;
-  for(const pv of world.querySelectorAll('.pivot:not(.pface)')){
+  if(GL){GL.pivot&&GL.pivot.classList.remove('gliding');GL=null;}
+  for(const pv of world.querySelectorAll('.pivot')){
     while(pv.firstChild)world.appendChild(pv.firstChild);  // 先归还，否则整层方块随容器消失
     pv.remove();
   }
   world.classList.remove('t3d');
 }
 function isStale(g){return g!==S.gen;}
-function animTurn(m,ms,cb,token){
-  const pivot=document.createElement('div');
-  pivot.className='pivot';
-  world.appendChild(pivot);
-  const sel=PIECES.filter(p=>{
+/* A1：把「层选取 + 挂载到 pivot」抽出来，跟手拖拽与补间动画共用 */
+function layerPieces(m){
+  return PIECES.filter(p=>{
     if(m.ax==='x')return p.x===m.L;
     if(m.ax==='y')return p.y===m.L;
     return p.z===m.L;
   });
-  for(const p of sel)pivot.appendChild(p.el);
+}
+function axisOf(m){return m.ax==='x'?'rotateX':m.ax==='y'?'rotateY':'rotateZ';}
+/* 旋向必须与 remapPieces 的落点变换同号 */
+function signOf(m){return (m.ax==='x')?1:-1;}
+/* 落位：状态推进 + 方块归还 + 重排，跟手提交与补间收尾共用 */
+function settleTurn(m,pivot,sel){
+  S.state=applyMove(S.state,m);
+  pivot.classList.remove('turning');pivot.classList.remove('gliding');
+  for(const p of sel)world.appendChild(p.el);
+  pivot.remove();
+  world.classList.remove('t3d');   // 内壁归位
+  remapPieces(m);
+}
+function animTurn(m,ms,cb,token,from,keepPivot,keepSel){
+  const pivot=keepPivot||document.createElement('div');
+  const sel=keepSel||layerPieces(m);
+  if(!keepPivot){
+    pivot.className='pivot';
+    world.appendChild(pivot);
+    for(const p of sel)pivot.appendChild(p.el);
+  }
   setHover(null);
   pivot.classList.add('turning');
+  pivot.classList.remove('gliding');
   world.classList.add('t3d');
-  const axis=m.ax==='x'?'rotateX':m.ax==='y'?'rotateY':'rotateZ';
-  // 旋向必须与 remapPieces 的落点变换同号，否则动画方向与结果相反
-  const sign=(m.ax==='x')?1:-1;
+  const axis=axisOf(m);
+  const sign=signOf(m);
   const target=90*m.d*sign;
+  const start=(typeof from==='number')?from:0;
   const reclaim=()=>{while(pivot.firstChild)world.appendChild(pivot.firstChild);
     pivot.remove();world.classList.remove('t3d');};
   const t0=performance.now();
@@ -530,19 +649,15 @@ function animTurn(m,ms,cb,token){
   function fr(now){
     if(isStale(token)){reclaim();return;}
     const t=Math.min(1,(now-t0)/ms);
-    const e=1-Math.pow(1-t,2.6)*Math.cos(t*0.52);   // 缓出 + 轻微收尾回弹
-    pivot.style.transform=axis+'('+(target*e)+'deg)';
+    /* C4：先快后慢 + 约 2.2% 过冲再回落，贴近真实魔方的「甩到位」手感 */
+    const e=t>=1?1:1-Math.pow(2,-9.2*t)*Math.cos(t*10.6);
+    pivot.style.transform=axis+'('+(start+(target-start)*e)+'deg)';
     if(t<1)requestAnimationFrame(fr);
     else{
       if(isStale(token)){reclaim();return;}
-      S.state=applyMove(S.state,m);
-      pivot.classList.remove('turning');
-      for(const p of sel)world.appendChild(p.el);
-      pivot.remove();
-      world.classList.remove('t3d');   // 内壁归位
-      remapPieces(m);
+      settleTurn(m,pivot,sel);
       S.busy=false;
-      if(S.pendingFit){S.pendingFit=false;rebuild();}
+      if(S.pendingFit){S.pendingFit=false;resizeOnly();}
       if(cb)cb();
     }
   }
@@ -593,22 +708,34 @@ function rebuildStickers(list){
   }
   paint();
 }
-function doMove(m,record){
-  if(S.busy)return;
-  SFX.turn(S.moves,moveWeight(m));
-  animTurn(m,320,()=>{
-    if(record!==false){
-      S.undo.push(m);S.scr=[];S.moves++;setBtns();
-      if(isSolvedState()&&S.moves>0)winCheck();
-      save();
-    }
-  });
-}
 function winCheck(){
   if(S.done)return;
   S.done=true;
   SFX.solved();
-  showMask('完成','共用 <span class="big">'+S.moves+'</span> 步');
+  celebrate();
+  // 让庆祝动画先走完再弹遮罩，否则弹窗会盖住整个效果
+  setTimeout(()=>{
+    showMask('完成','共用 <span class="big">'+S.moves+'</span> 步');
+  },760);
+}
+/* C3：整体呼吸一次，同时六个面按 U D F B L R 依次泛光（纯 CSS 动画，零依赖） */
+function celebrate(){
+  world.classList.remove('win');
+  void world.offsetWidth;            // 强制回流以重启动画
+  world.classList.add('win');
+  setTimeout(()=>world.classList.remove('win'),780);
+  const byFace=[[],[],[],[],[],[]];
+  for(const p of PIECES)for(const s2 of p.stks)byFace[s2.face].push(s2.el);
+  byFace.forEach((els,f)=>{
+    setTimeout(()=>{
+      for(const el of els){
+        el.classList.remove('glow');
+        void el.offsetWidth;
+        el.classList.add('glow');
+        setTimeout(()=>el.classList.remove('glow'),540);
+      }
+    },f*68);
+  });
 }
 function showMask(t,b){
   document.getElementById('mkTitle').innerHTML=t;
@@ -656,8 +783,9 @@ function solveBack(){
       save();return;
     }
     const m=seq[i++];
-    SFX.turn(i,moveWeight(m),0.65);   // 连打回放调轻，避免连续咔啦叠成噪音
-    animTurn(m,SPEED,()=>{if(isStale(token))return;S.busy=true;setTimeout(step,0);},token);
+    SFX.turn(i,moveWeight(),0.65);   // 连打回放调轻，避免连续咔啦叠成噪音
+    /* F3：用 rAF 对齐帧时序，后台标签页自动节流，不会跑飞 */
+    animTurn(m,SPEED,()=>{if(isStale(token))return;S.busy=true;requestAnimationFrame(step);},token);
   };
   step();
 }
@@ -701,7 +829,7 @@ function load(){
     if(!validState(d.state,k))return false;
     S.kind=d.kind;
     S.moves=(typeof d.moves==='number'&&isFinite(d.moves)&&d.moves>=0)?Math.floor(d.moves):0;
-    S.rx=(typeof d.rx==='number'&&isFinite(d.rx))?Math.max(-85,Math.min(85,d.rx)):k.rx;
+    S.rx=(typeof d.rx==='number'&&isFinite(d.rx))?Math.max(-TUNE.rxLimit,Math.min(TUNE.rxLimit,d.rx)):k.rx;
     S.ry=(typeof d.ry==='number'&&isFinite(d.ry))?d.ry:k.ry;
     S.state=d.state.map(a=>Int8Array.from(a));
     S.undo=validUndo(d.undo,k);S.scr=validUndo(d.scr,k);
@@ -747,13 +875,21 @@ function pickTurn(stk,dx,dy){
     const len=Math.hypot(sv[0],sv[1])||1e-6;
     let score=(dx*sv[0]+dy*sv[1])/len;
     if(ax!=='x')score=-score;
-    cands.push({ax,L:Lv,score,abs:Math.abs(score)});
+    /* A1：len 是该切向在屏幕上的投影长度（单位向量→像素比例），
+       用它把「手指位移」换算成「转层角度」，跟手才会线性贴合 */
+    const unit=len*(S.fit&&S.fit.sc?S.fit.sc:1)*CELL;
+    cands.push({ax,L:Lv,score,abs:Math.abs(score),unit});
   }
   if(!cands.length)return null;
   cands.sort((a,b)=>b.abs-a.abs);
   const best=cands[0];
-  if(best.abs<6)return null;
-  return {ax:best.ax,L:best.L,d:best.score>0?1:-1};
+  /* A4：不再用固定像素阈值否决，改判前两名的分离度。
+     两个候选打分接近 = 拖动方向介于两轴之间、意图不明确，
+     此时返回 null 让调用方继续等几个像素，避免「赌错转轴」 */
+  if(cands.length>1&&cands[1].abs>0&&best.abs<cands[1].abs*TUNE.sep)return null;
+  if(best.abs<1e-3)return null;
+  return {ax:best.ax,L:best.L,d:best.score>0?1:-1,
+    unit:best.unit,raw:best.score};
 }
 let HOV=null;
 function setHover(el){
@@ -768,10 +904,124 @@ function onHover(e){
   if(e.pointerType==='touch'){setHover(null);return;}
   setHover(hitAt(e.clientX,e.clientY));
 }
+
+/* ===== A1 跟手拖拽转层 =====
+   GL 为一次「跟手会话」：锁定转轴后，层已挂在 pivot 上，
+   角度由手指位移实时驱动；松手按角度决定吸附到 90° 或回弹到 0° */
+let GL=null;
+function beginGlide(m,stk){
+  const sel=layerPieces(m);
+  const pivot=document.createElement('div');
+  pivot.className='pivot';
+  world.appendChild(pivot);
+  for(const p of sel)pivot.appendChild(p.el);
+  /* t3d 内壁外推必须保留：跟手期间转层面与内壁长时间共面，
+     不推开会触发 GPU 排序翻转的黑块。will-change 只给这一层，松手即撤 */
+  world.classList.add('t3d');
+  pivot.classList.add('gliding');   // C1 整层高亮 + 按需 will-change
+  setHover(null);
+  GL={m,pivot,sel,ang:0,unit:m.unit||40,axis:axisOf(m),sign:signOf(m),last:0};
+  S.busy=true;
+  return GL;
+}
+function glideTo(deg){
+  if(!GL)return;
+  const lim=90;
+  GL.ang=Math.max(-lim,Math.min(lim,deg));
+  GL.pivot.style.transform=GL.axis+'('+(GL.ang*GL.sign)+'deg)';
+  /* 每跨过一格给一次轻咔哒，强化「正在拧」的触感 */
+  const step=Math.round(GL.ang/30);
+  if(step!==GL.last){GL.last=step;SFX.grab();}
+}
+function endGlide(){
+  if(!GL)return;
+  const g=GL;GL=null;
+  const cur=g.ang*g.sign;                 // 当前实际视觉角度
+  const commit=Math.abs(g.ang)>=TUNE.commit;
+  g.pivot.classList.remove('gliding');    // 先撤提升，避免常驻显存
+  if(commit){
+    const d=g.ang>0?1:-1;
+    const m={ax:g.m.ax,L:g.m.L,d:d};
+    const rest=Math.abs(90-Math.abs(g.ang))/90;
+    const ms=Math.max(70,Math.round(TUNE.snapMs*rest));
+    SFX.turn(S.moves,moveWeight());
+    S.busy=true;
+    animTurn(m,ms,()=>{
+      S.undo.push(m);S.scr=[];S.moves++;setBtns();
+      if(isSolvedState()&&S.moves>0)winCheck();
+      save();
+    },undefined,cur,g.pivot,g.sel);
+  }else{
+    /* 回弹到 0°：不改状态，把方块原样还回 world */
+    const token=S.gen;
+    const t0=performance.now();
+    const ms=Math.max(60,Math.round(TUNE.snapMs*Math.abs(g.ang)/90));
+    S.busy=true;
+    const back=now=>{
+      if(isStale(token)){
+        while(g.pivot.firstChild)world.appendChild(g.pivot.firstChild);
+        g.pivot.remove();world.classList.remove('t3d');S.busy=false;return;
+      }
+      const t=Math.min(1,(now-t0)/ms);
+      const e=1-Math.pow(1-t,2.4);
+      g.pivot.style.transform=g.axis+'('+(cur*(1-e))+'deg)';
+      if(t<1)requestAnimationFrame(back);
+      else{
+        while(g.pivot.firstChild)world.appendChild(g.pivot.firstChild);
+        g.pivot.remove();world.classList.remove('t3d');
+        S.busy=false;
+        if(S.pendingFit){S.pendingFit=false;resizeOnly();}
+      }
+    };
+    requestAnimationFrame(back);
+  }
+}
+
+/* B2 视角回正 / 预设（带缓动，不参与跟手） */
+function viewTo(rx,ry){
+  VEL.vx=0;VEL.vy=0;
+  world.classList.add('vtween');
+  S.rx=Math.max(-TUNE.rxLimit,Math.min(TUNE.rxLimit,rx));S.ry=ry;
+  applyView();
+  clearTimeout(viewTo._t);
+  viewTo._t=setTimeout(()=>{world.classList.remove('vtween');save();},300);
+}
+function viewHome(){const k=curKind();viewTo(k.rx,k.ry);SFX.click();}
+
+/* B3 视角惯性 */
+const VEL={vx:0,vy:0,raf:0,t:0};
+function stopInertia(){if(VEL.raf){cancelAnimationFrame(VEL.raf);VEL.raf=0;}VEL.vx=0;VEL.vy=0;}
+function startInertia(){
+  if(Math.abs(VEL.vx)<TUNE.inertiaMin&&Math.abs(VEL.vy)<TUNE.inertiaMin)return;
+  const stepFn=()=>{
+    VEL.vx*=TUNE.inertiaDecay;VEL.vy*=TUNE.inertiaDecay;
+    S.ry+=VEL.vx;
+    S.rx=Math.max(-TUNE.rxLimit,Math.min(TUNE.rxLimit,S.rx+VEL.vy));
+    applyView();
+    if(Math.abs(VEL.vx)<TUNE.inertiaMin&&Math.abs(VEL.vy)<TUNE.inertiaMin){
+      VEL.raf=0;save();return;
+    }
+    VEL.raf=requestAnimationFrame(stepFn);
+  };
+  VEL.raf=requestAnimationFrame(stepFn);
+}
+
+function lockThreshold(touch){
+  return Math.max(touch?TUNE.lockMinTouch:TUNE.lockMinMouse,
+    CELL*(S.fit&&S.fit.sc?S.fit.sc:1)*(touch?TUNE.lockRatioTouch:TUNE.lockRatioMouse));
+}
 function onDown(e){
-  if(S.busy)return;
+  unlockAudio();              // F4
+  stopInertia();
+  /* A2：动画进行中按下，先把在途的那一步立即落位，不吞输入 */
+  if(S.busy&&!S.solving){abortAnim();}
+  if(S.solving)return;
   const p=pt(e);
-  drag={x0:p.x,y0:p.y,stk:hitAt(p.x,p.y),rx0:S.rx,ry0:S.ry,turned:false,moved:false};
+  const stk=hitAt(p.x,p.y);
+  drag={x0:p.x,y0:p.y,stk:stk,rx0:S.rx,ry0:S.ry,turned:false,moved:false,
+    touch:e.pointerType==='touch',px:p.x,py:p.y,pt0:performance.now(),
+    multi:false};
+  if(stk)stk.classList.add('press');   // C2 触摸/鼠标按下态
   setHover(null);
   stage.classList.add('drag');
   if(e.cancelable)e.preventDefault();
@@ -781,22 +1031,47 @@ function onMove(e){
   const p=pt(e);
   const dx=p.x-drag.x0, dy=p.y-drag.y0;
   if(Math.abs(dx)>3||Math.abs(dy)>3)drag.moved=true;
-  if(drag.stk&&!drag.turned){
-    if(Math.hypot(dx,dy)>14){
+
+  if(GL){
+    /* 已锁定转轴：位移投影 / 格子像素 × 90°，线性跟手 */
+    const m=GL.m;
+    const n=FACE_N[+drag.stk.dataset.f],axv=AXV[m.ax];
+    const tangent=[axv[1]*n[2]-axv[2]*n[1],axv[2]*n[0]-axv[0]*n[2],axv[0]*n[1]-axv[1]*n[0]];
+    const sv=rotV(tangent,S.rx,S.ry);
+    const len=Math.hypot(sv[0],sv[1])||1e-6;
+    let proj=(dx*sv[0]+dy*sv[1])/len;
+    if(m.ax!=='x')proj=-proj;
+    glideTo(proj/(GL.unit||40)*90);
+  }else if(drag.stk&&!drag.turned){
+    if(Math.hypot(dx,dy)>lockThreshold(drag.touch)){
       const m=pickTurn(drag.stk,dx,dy);
-      if(m){drag.turned=true;doMove(m);}
+      if(m){   // A4 不明确时 pickTurn 返回 null，这里会继续等下一帧
+        drag.turned=true;
+        drag.stk.classList.remove('press');
+        beginGlide(m,drag.stk);
+        const g=GL;
+        if(g)glideTo(Math.abs(m.raw||0)/(g.unit||40)*90*((m.raw||0)>0?1:-1));
+      }
     }
   }else if(!drag.stk){
-    S.ry=drag.ry0+dx*0.42;
-    S.rx=Math.max(-85,Math.min(85,drag.rx0-dy*0.42));
+    const now=performance.now(), dt=Math.max(1,now-drag.pt0);
+    VEL.vx=(p.x-drag.px)*TUNE.viewSens*(16/dt);   // B3 记录松手前速度
+    VEL.vy=-(p.y-drag.py)*TUNE.viewSens*(16/dt);
+    drag.px=p.x;drag.py=p.y;drag.pt0=now;
+    S.ry=drag.ry0+dx*TUNE.viewSens;
+    S.rx=Math.max(-TUNE.rxLimit,Math.min(TUNE.rxLimit,drag.rx0-dy*TUNE.viewSens));  // B4
     applyView();
   }
   if(e.cancelable)e.preventDefault();
 }
 function onUp(){
   if(!drag)return;
-  if(!drag.moved&&drag.stk)SFX.grab();
-  if(!drag.stk)save();
+  if(drag.stk)drag.stk.classList.remove('press');
+  if(GL){endGlide();}
+  else{
+    if(!drag.moved&&drag.stk)SFX.grab();
+    if(!drag.stk){startInertia();save();}
+  }
   drag=null;stage.classList.remove('drag');stage.classList.remove('onpiece');
 }
 function buildSeg(){
@@ -840,6 +1115,30 @@ function boot(){
   window.addEventListener('pointermove',onMove,{passive:false});
   window.addEventListener('pointerup',onUp);
   window.addEventListener('pointercancel',onUp);
+  /* B2：双击空白处回正视角（双击贴纸不触发，避免误伤转层） */
+  stage.addEventListener('dblclick',e=>{
+    if(!hitAt(e.clientX,e.clientY))viewHome();
+  });
+  document.getElementById('vHome').addEventListener('pointerdown',e=>{
+    e.stopPropagation();e.preventDefault();
+  });
+  document.getElementById('vHome').onclick=e=>{e.stopPropagation();viewHome();};
+  /* B1：方向键转视角，桌面端零成本 */
+  window.addEventListener('keydown',e=>{
+    const tag=(document.activeElement&&document.activeElement.tagName)||'';
+    if(tag==='INPUT'||tag==='TEXTAREA')return;
+    const STEP=e.shiftKey?18:7;
+    let hit=true;
+    switch(e.key){
+      case 'ArrowLeft':  stopInertia();S.ry-=STEP;break;
+      case 'ArrowRight': stopInertia();S.ry+=STEP;break;
+      case 'ArrowUp':    stopInertia();S.rx=Math.max(-TUNE.rxLimit,S.rx-STEP);break;
+      case 'ArrowDown':  stopInertia();S.rx=Math.min(TUNE.rxLimit,S.rx+STEP);break;
+      case 'Home': case 'h': case 'H': viewHome();hit=true;break;
+      default: hit=false;
+    }
+    if(hit){if(e.key!=='Home'&&e.key!=='h'&&e.key!=='H'){applyView();save();}e.preventDefault();}
+  });
   document.getElementById('btnScramble').onclick=scramble;
   document.getElementById('btnSolve').onclick=solveBack;
   document.getElementById('sndBtn').onclick=()=>{setSnd(!SND);if(SND)SFX.click();};
@@ -849,12 +1148,12 @@ function boot(){
   window.addEventListener('resize',()=>{
     cancelAnimationFrame(raf);
     raf=requestAnimationFrame(()=>{
-      if(!S.busy)rebuild();
-      else S.pendingFit=true;   // 转动中先挂起，结束后补偿
+      if(!S.busy)resizeOnly();   // F2：只重排，不重建 DOM
+      else S.pendingFit=true;    // 转动中先挂起，结束后补偿
     });
   });
   window.addEventListener('orientationchange',()=>{
-    setTimeout(()=>{if(!S.busy)rebuild();else S.pendingFit=true;},120);
+    setTimeout(()=>{if(!S.busy)resizeOnly();else S.pendingFit=true;},120);
   });
   if(restored&&isSolvedState()&&S.moves>0)S.done=true;
 }
