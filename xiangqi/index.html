@@ -1595,15 +1595,18 @@ function setLevel(id){
   else save();
 }
 
+/* 返回是否真的切换了：调用方只在成功时关弹窗 + 提示，
+   取消或点到当前项都保持弹窗打开，不再假装已生效 */
 function setHandicap(id){
-  if(id===S.handicap)return;
-  if(!confirmDiscard('切换让子将结束当前对局，确定继续？'))return;
+  if(id===S.handicap)return false;
+  if(!confirmDiscard('切换让子将结束当前对局，确定继续？'))return false;
   S.handicap=id;
   S.puzzle='';
   applyHandicap(id);
   S.startFen=exportFen();
-  newGame();
+  newGame();          // 内部已 hideMask()
   syncToolState();
+  return true;
 }
 
 function openHandicap(){
@@ -1614,7 +1617,9 @@ function openHandicap(){
   html+='</div><button class="mbtn ghost" id="maskCancel">取消</button>';
   showMask(html);
   maskBody.querySelectorAll('.opts button').forEach(b=>{
-    b.onclick=()=>{hideMask();setHandicap(b.dataset.id);toast(b.querySelector('strong').textContent);};
+    b.onclick=()=>{
+      if(setHandicap(b.dataset.id))toast(b.querySelector('strong').textContent);
+    };
   });
   document.getElementById('maskCancel').onclick=hideMask;
 }
