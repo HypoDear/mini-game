@@ -141,6 +141,9 @@ body{
 .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--ink);
   border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
 </style>
 </head>
 <body>
@@ -363,10 +366,23 @@ const S={
   tier:TIERS[0],
   maxLevel:0,
   sel:-1,
-  start:0, elapsed:0, done:false, timer:null,
+  done:false,
 };
 const $=id=>document.getElementById(id);
-const KEY='sudoku_save_v3';
+const KEY='sudoku_save_v1';
+/* 旧版本存档键迁移：历史上用过 v3，首次加载时搬运到 v1 后清掉旧键，
+   避免用户升级后进度凭空消失 */
+(function migrateSave(){
+  try{
+    const legacy=localStorage.getItem('sudoku_save_v3');
+    if(!legacy)return;
+    // 新键没有数据时才搬运，避免覆盖更新的进度；
+    // 但无论是否搬运，旧键都要清掉 —— 否则页面卸载时的自动存档
+    // 会先写出新键，导致旧键永远残留
+    if(!localStorage.getItem(KEY))localStorage.setItem(KEY,legacy);
+    localStorage.removeItem('sudoku_save_v3');
+  }catch(e){}
+})();
 
 const grid=$('grid'),cells=[];
 for(let i=0;i<81;i++){
@@ -491,10 +507,10 @@ function conflicts(){
 function checkWin(){
   if(S.values.length!==81||S.solution.length!==81)return;
   if(S.values.some((v,i)=>v!==S.solution[i]))return;
-  S.done=true;stopTimer();
+  S.done=true;
   try{localStorage.removeItem(KEY);}catch(e){}
   const html='<h2>完成</h2>'+
-    '<p>'+S.tier.name+' · 用时 '+fmt(S.elapsed)+'<br>本局最高技巧：'+LEVELS[S.maxLevel]+'</p>'+
+    '<p>'+S.tier.name+'<br>本局最高技巧：'+LEVELS[S.maxLevel]+'</p>'+
     '<button class="mbtn" id="againBtn">再来一局</button>';
   sweepBoard(()=>{
     confetti(90);
@@ -558,12 +574,6 @@ function confetti(n){
   setTimeout(()=>box.remove(),4200);
 }
 
-const fmt=s=>String((s/60)|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
-function startTimer(){
-  stopTimer();
-  S.timer=setInterval(()=>{if(!S.done)S.elapsed=((Date.now()-S.start)/1000)|0;},1000);
-}
-function stopTimer(){if(S.timer)clearInterval(S.timer);S.timer=null;}
 
 function render(){
   const bad=conflicts();
@@ -592,7 +602,7 @@ function save(){
   if(S.done)return;
   try{
     localStorage.setItem(KEY,JSON.stringify({
-      p:S.puzzle,s:S.solution,v:S.values,t:S.tier.id,ml:S.maxLevel,e:S.elapsed
+      p:S.puzzle,s:S.solution,v:S.values,t:S.tier.id,ml:S.maxLevel
     }));
   }catch(e){}
 }
@@ -612,8 +622,6 @@ function load(){
     }
     S.puzzle=o.p;S.solution=o.s;S.values=o.v;S.tier=t;
     S.maxLevel=Number.isInteger(o.ml)?o.ml:0;
-    S.elapsed=Number.isInteger(o.e)&&o.e>=0?o.e:0;
-    S.start=Date.now()-S.elapsed*1000;
     S.done=false;
     return true;
   }catch(e){return false;}
@@ -628,9 +636,8 @@ function newGame(tier){
     const g=generate(tier);
     S.puzzle=g.puzzle;S.solution=g.solution;S.maxLevel=g.maxLevel;
     S.values=g.puzzle.slice();
-    S.sel=-1;S.done=false;S.elapsed=0;S.start=Date.now();
-    $('mask').classList.remove('show');
-    startTimer();render();save();
+    S.sel=-1;S.done=false;
+    $('mask').classList.remove('show');render();save();
   },40);
 }
 
@@ -668,7 +675,7 @@ window.addEventListener('resize',fitBoardSoon);
 window.addEventListener('orientationchange',()=>setTimeout(fitBoardSoon,120));
 
 fitBoardSoon();
-if(load()){startTimer();render();}
+if(load()){render();}
 else newGame(TIERS[0]);
 window.addEventListener('beforeunload',save);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});
