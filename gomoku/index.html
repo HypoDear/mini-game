@@ -91,6 +91,9 @@ body{
   0%{transform:translateY(-10px) rotate(0);opacity:1}
   100%{transform:translateY(102vh) rotate(720deg);opacity:.85}
 }
+@media(prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
 </style>
 </head>
 <body>
