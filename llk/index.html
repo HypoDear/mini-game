@@ -145,6 +145,9 @@ body{
   0%{transform:translateY(-10px) rotate(0);opacity:1}
   100%{transform:translateY(102vh) rotate(720deg);opacity:.85}
 }
+@media(prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
 </style>
 </head>
 <body>
@@ -391,7 +394,6 @@ const S={
   gen:0,
   matchId:0,
   out:8,
-  started:0, elapsed:0, timer:null,
 };
 const $=id=>document.getElementById(id);
 const gridEl=$('grid'), svg=$('ln');
@@ -533,13 +535,6 @@ function renderAll(){
   for(let r=1;r<=b.rows;r++)for(let c=1;c<=b.cols;c++) renderTile(r,c);
 }
 
-const fmt=s=>String((s/60)|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
-function startTimer(){
-  stopTimer();
-  S.started=Date.now()-S.elapsed*1000;
-  S.timer=setInterval(()=>{if(!S.over)S.elapsed=((Date.now()-S.started)/1000)|0;},1000);
-}
-function stopTimer(){if(S.timer)clearInterval(S.timer);S.timer=null;}
 
 function onTile(r,c){
   if(S.busy||S.over)return;
@@ -685,12 +680,12 @@ function shatter(r,c){
 }
 
 function finish(){
-  S.over=true;stopTimer();
+  S.over=true;
   confetti(90);
   SFXG.win();
   $('maskBody').innerHTML=
     '<h2>完成</h2>'+
-    '<p>'+S.tier.name+' · 用时 '+fmt(S.elapsed)+'<br>重排 '+S.reshuffles+' 次</p>'+
+    '<p>'+S.tier.name+'<br>重排 '+S.reshuffles+' 次</p>'+
     '<button class="mbtn" id="againBtn">再来一局</button>';
   $('mask').classList.add('show');
   $('againBtn').onclick=()=>{$('mask').classList.remove('show');newGame(S.tier);};
@@ -751,7 +746,7 @@ function newGame(tier){
   $('mask').classList.add('show');
   setTimeout(()=>{
     S.gen++;
-    S.over=false;S.busy=false;S.sel=null;S.reshuffles=0;S.elapsed=0;
+    S.over=false;S.busy=false;S.sel=null;S.reshuffles=0;
     const b=makeBoard(tier.rows,tier.cols);
     for(let attempt=0;attempt<100;attempt++){
       generate(b,tier.kinds);
@@ -763,7 +758,6 @@ function newGame(tier){
     layout();
     clearPath();
     $('mask').classList.remove('show');
-    startTimer();
     renderAll();
   },40);
 }
@@ -774,7 +768,6 @@ function syncSnd(){sndBtn.setAttribute('aria-checked',SFX.on?'true':'false');}
 sndBtn.onclick=()=>{SFX.set(!SFX.on);syncSnd();if(SFX.on)SFXG.tick();};
 syncSnd();
 window.addEventListener('resize',()=>{ if(S.board){layout();renderAll();} });
-document.addEventListener('visibilitychange',()=>{ if(document.hidden)stopTimer(); else if(!S.over)startTimer(); });
 
 window.addEventListener('beforeunload',e=>{
   if(!hasProgress())return;
