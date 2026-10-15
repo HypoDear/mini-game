@@ -1572,6 +1572,9 @@ function undo(){
 }
 
 function setMode(id){
+  if(id===S.mode)return;
+  if(!confirmDiscard('切换对战模式将结束当前对局，确定继续？'))
+    {refreshSegs();return;}
   S.mode=id;
   S.puzzle='';
   S.startFen=S.handicap==='none'?START_FEN:S.startFen;
@@ -1582,6 +1585,10 @@ function setMode(id){
 }
 
 function setLevel(id){
+  if(id===S.level)return;
+  // 人机模式下切难度会重开；双人模式只是存设置，无需确认
+  if(S.mode==='pve'&&!confirmDiscard('切换难度将结束当前对局，确定继续？'))
+    {refreshSegs();return;}
   S.level=id;
   refreshSegs();
   if(S.mode==='pve')newGame();
@@ -1589,6 +1596,8 @@ function setLevel(id){
 }
 
 function setHandicap(id){
+  if(id===S.handicap)return;
+  if(!confirmDiscard('切换让子将结束当前对局，确定继续？'))return;
   S.handicap=id;
   S.puzzle='';
   applyHandicap(id);
@@ -1729,6 +1738,11 @@ function load(){
   }catch(e){return false;}
 }
 
+/* 统一的「会丢失当前对局」确认：无子力变动或已终局则直接放行 */
+function confirmDiscard(msg){
+  if(S.hist.length===0||S.done)return true;
+  return confirm(msg||'当前对局将结束，确定继续？');
+}
 function askNew(){
   if(S.hist.length===0||S.done||confirm('当前对局将结束，确定重新开始？')){
     const keep=S.puzzle;
