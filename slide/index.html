@@ -606,8 +606,16 @@ function newGame(){
   save();
 }
 
+/* 与「重开」一致的丢弃确认：未动过或已完成则直接放行 */
+function confirmDiscard(msg){
+  if(S.moves===0||S.done)return true;
+  return confirm(msg||'当前进度将丢失，确定继续？');
+}
 function setSize(n){
   if(S.busy)return;
+  if(n===S.n)return;
+  if(!confirmDiscard('切换阶数将重新打乱，当前进度将丢失，确定继续？'))
+    {refreshSegs();return;}
   S.n=n;
   refreshSegs();
   newGame();
