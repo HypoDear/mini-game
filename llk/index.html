@@ -423,9 +423,9 @@ function layout(){
   let cw=w/b.cols;
   let ch=maxH/b.rows;
   let s=Math.min(cw,ch);
+  s=Math.max(16,Math.floor(s));   // 先取整并约束下限，再算总宽高，避免强制放大后溢出容器
   const totalW=s*b.cols, totalH=s*b.rows;
   gridEl.style.height=totalH+'px';
-  if(s<24)s=24;
   for(let r=1;r<=b.rows;r++)for(let c=1;c<=b.cols;c++){
     const el=S.tiles[r][c];if(!el)continue;
     el.style.width=(s-4)+'px';
@@ -767,7 +767,6 @@ const sndBtn=$('sndBtn');
 function syncSnd(){sndBtn.setAttribute('aria-checked',SFX.on?'true':'false');}
 sndBtn.onclick=()=>{SFX.set(!SFX.on);syncSnd();if(SFX.on)SFXG.tick();};
 syncSnd();
-window.addEventListener('resize',()=>{ if(S.board){layout();renderAll();} });
 
 window.addEventListener('beforeunload',e=>{
   if(!hasProgress())return;
@@ -794,6 +793,8 @@ function fitBoard(){
     h=avail-chrome;
   }
   document.documentElement.style.setProperty('--bmax',Math.max(140,h)+'px');
+  // 可用高度变了，格子必须同步重排，否则横竖屏切换后会沿用旧尺寸导致超框
+  if(S.board){ layout(); renderAll(); }
 }
 function fitBoardSoon(){
   let n=0;
