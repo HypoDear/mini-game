@@ -15,6 +15,11 @@
 | [滑块拼图](slide/) | 三档棋盘与两种牌面，开局保证可解 | [开始游戏](https://hypodear.github.io/mini-game/slide/) |
 | [魔方](cube/) | 三/四/五阶，拖动色块即转层 | [开始游戏](https://hypodear.github.io/mini-game/cube/) |
 
+## 外观
+
+每个页面右上角都有一枚开关，可在白天与深夜之间切换。默认始终为白天；
+切换后的选择存入 `localStorage`，合集页与各游戏页共用同一份偏好，重新打开仍然保持。
+
 ## 在线地址
 
 https://hypodear.github.io/mini-game/
