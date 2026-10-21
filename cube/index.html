@@ -7,6 +7,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>魔方</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23fffdf7'/><stop offset='1' stop-color='%23dcc9a2'/></linearGradient><linearGradient id='s' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23ffffff' stop-opacity='.75'/><stop offset='1' stop-color='%23ffffff' stop-opacity='0'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><rect width='32' height='32' rx='7' fill='url(%23s)'/><g stroke='%233b3228' stroke-width='1.7' stroke-linejoin='round' fill='none'><path d='M16 4.5l9.5 5.5v11L16 26.5 6.5 21V10z'/><path d='M16 4.5L16 15.5M16 15.5l9.5-5.5M16 15.5L6.5 10M16 15.5L16 26.5'/><path d='M16 15.5l9.5 5.5M16 15.5l-9.5 5.5' stroke-opacity='.55'/></g><path d='M16 15.5l9.5-5.5v5.5l-9.5 5.5z' fill='%23b33f2b' opacity='.5'/></svg>">
+<script>
+/* 主题引导：首帧前恢复上次手动选择的深夜模式；默认保持白天 */
+(function(){try{
+  if(localStorage.getItem('hd-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');
+}catch(e){}})();
+</script>
 <style>
 :root{
   --paper:#f4efe4; --paper2:#fbf8f1; --ink:#2f2a24; --ink-soft:#8c8275;
@@ -15,6 +21,43 @@
   /* 魔方标准六色 */
   --cU:#f7f9fb; --cD:#ffd426; --cF:#17c964; --cB:#2f7bff; --cL:#ff8c1a; --cR:#f3303f;
 }
+[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#15171c; --paper2:#1c1f26; --ink:#e8e4dc; --ink-soft:#9aa0ab;
+  --line:#2e333d; --accent:#5fb3d0; --bad:#e0796e; --good:#5ec08c;
+  --line-bold:#50586a; --accent-soft:#1b3a47; --sel:#33383f;
+}
+/* 魔方六色贴纸不改（标准色是功能性的），只压暗环境与内壁 */
+[data-theme="dark"] .tools button:active{background:#262b33}
+[data-theme="dark"] .tools button.snd .sndTr{background:#343a44}
+[data-theme="dark"] .tools button.snd .sndTr::after{background:#e8e4dc;box-shadow:0 1px 2px rgba(0,0,0,.5)}
+[data-theme="dark"] .mask{background:rgba(21,23,28,.95)}
+
+/* ===== 主题切换开关 ===== */
+.thm{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  flex:none;width:30px;height:30px;padding:0;cursor:pointer;
+  border:1px solid var(--thm-line,var(--line));border-radius:999px;
+  background:var(--thm-bg,var(--paper2));color:var(--thm-fg,var(--ink-soft,var(--ink)));
+  -webkit-tap-highlight-color:transparent;
+  transition:background .2s,border-color .2s,color .2s}
+.thm:hover{color:var(--thm-fg-on,var(--accent));border-color:var(--thm-line-on,var(--accent))}
+.thm:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.thm svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.thm .sun{transition:opacity .22s,transform .32s cubic-bezier(.3,.8,.3,1)}
+.thm .moon{position:absolute;transition:opacity .22s,transform .32s cubic-bezier(.3,.8,.3,1)}
+/* 浅色：显示月亮（点击去深色）；深色：显示太阳（点击回浅色） */
+.thm .sun{opacity:0;transform:rotate(-70deg) scale(.6)}
+.thm .moon{opacity:1;transform:none}
+[data-theme="dark"] .thm .sun{opacity:1;transform:none}
+[data-theme="dark"] .thm .moon{opacity:0;transform:rotate(70deg) scale(.6)}
+@media(prefers-reduced-motion:reduce){.thm,.thm svg,.thm .sun,.thm .moon{transition-duration:.01ms!important}}
+.tools button.thm{flex:0 0 auto;width:29px;min-width:29px;height:29px;padding:0;
+  background:var(--paper2);color:var(--ink-soft);border-color:var(--line);
+  display:inline-flex;align-items:center;justify-content:center}
+.tools button.thm:hover{color:var(--ink);border-color:var(--line)}
+.tools button.thm:active{background:var(--paper2)}
+
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* 锁成单屏：拖拽不会演变成整页滚动 */
 html,body{margin:0;height:100%;overflow:hidden}
@@ -180,6 +223,11 @@ button.snd:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
     <button id="btnSolve" aria-label="回放复原">复原</button>
     <button class="snd on" id="sndBtn" role="switch" aria-checked="true" aria-label="音效开关">
       <span class="sndTx">音效</span><span class="sndTr"><i></i></span>
+    </button>
+  
+    <button class="thm" id="thmBtn" type="button" aria-label="切换深色模式" title="切换深色模式">
+    <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1z"/></svg>
+    <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.1"/><path d="M12 2.6v2.3M12 19.1v2.3M4.4 4.4l1.7 1.7M17.9 17.9l1.7 1.7M2.6 12h2.3M19.1 12h2.3M4.4 19.6l1.7-1.7M17.9 6.1l1.7-1.7"/></svg>
     </button>
   </div>
   <div class="stage" id="stage" role="application" aria-label="魔方，拖动色块转层，拖动空白转视角，方向键转视角"><div class="scene"><div class="world" id="world"></div></div>
@@ -1176,6 +1224,29 @@ function boot(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
 else boot();
+</script>
+<script>
+/* 主题切换：仅在点击开关时切换，并记住选择 */
+(function(){
+  var k='hd-theme',root=document.documentElement,btn=document.getElementById('thmBtn');
+  var meta=document.querySelector('meta[name="theme-color"]');
+  var C={light:'#f4efe4',dark:'#15171c'};
+  function paint(v){
+    if(v==='dark')root.setAttribute('data-theme','dark');else root.removeAttribute('data-theme');
+    if(meta)meta.setAttribute('content',C[v]);
+    if(btn){
+      btn.setAttribute('aria-label',v==='dark'?'切换浅色模式':'切换深色模式');
+      btn.setAttribute('title',btn.getAttribute('aria-label'));
+    }
+  }
+  paint(root.getAttribute('data-theme')==='dark'?'dark':'light');
+  if(btn)btn.addEventListener('click',function(){
+    var v=root.getAttribute('data-theme')==='dark'?'light':'dark';
+    try{localStorage.setItem(k,v)}catch(e){}
+    paint(v);
+    try{document.dispatchEvent(new Event('hd-theme'))}catch(e){}
+  });
+})();
 </script>
 </body>
 </html>

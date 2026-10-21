@@ -7,6 +7,12 @@
 <meta name="theme-color" content="#f4efe4">
 <title>数独</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><rect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23fbf8f1%27/><rect x=%273.5%27 y=%273.5%27 width=%2725%27 height=%2725%27 rx=%273.5%27 fill=%27none%27 stroke=%27%232f2a24%27 stroke-width=%272.4%27/><path d=%27M12.5 4v24M19.5 4v24M4 12.5h24M4 19.5h24%27 stroke=%27%232f2a24%27 stroke-width=%271.1%27/><rect x=%2712.5%27 y=%2712.5%27 width=%277%27 height=%277%27 fill=%27%231f6f8b%27/><circle cx=%278%27 cy=%278%27 r=%271.6%27 fill=%27%232f2a24%27/><circle cx=%2724%27 cy=%278%27 r=%271.6%27 fill=%27%232f2a24%27/><circle cx=%278%27 cy=%2724%27 r=%271.6%27 fill=%27%232f2a24%27/><circle cx=%2724%27 cy=%2724%27 r=%271.6%27 fill=%27%232f2a24%27/></svg>">
+<script>
+/* 主题引导：首帧前恢复上次手动选择的深夜模式；默认保持白天 */
+(function(){try{
+  if(localStorage.getItem('hd-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');
+}catch(e){}})();
+</script>
 <style>
 :root{
   --paper:#f4efe4; --paper2:#fbf8f1; --ink:#2f2a24; --ink-soft:#8c8275;
@@ -14,6 +20,71 @@
   --bad:#c0463c; --bad-soft:#f6ddd9; --good:#2e7d5b; --sel:#e8dcc2;
   --radius:10px;
 }
+[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#15171c; --paper2:#1c1f26; --ink:#e8e4dc; --ink-soft:#9aa0ab;
+  --line:#2e333d; --accent:#5fb3d0; --bad:#e0796e; --good:#5ec08c;
+  --line-bold:#50586a; --accent-soft:#1b3a47; --bad-soft:#402424; --sel:#33383f;
+}
+/* 棋盘格：浅色用的是暖白立体渐变，深色改为低对比哑光面 */
+[data-theme="dark"] .cell{
+  background:linear-gradient(160deg,#20242c 0%,#1c2027 55%,#191c22 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),inset 0 -1.5px 0 rgba(0,0,0,.3);
+  text-shadow:none}
+[data-theme="dark"] .cell.given{text-shadow:none}
+[data-theme="dark"] .cell.user{text-shadow:none}
+[data-theme="dark"] .cell.same{
+  background:linear-gradient(160deg,#1d3d4b 0%,var(--accent-soft) 55%,#16303b 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 -1.5px 0 rgba(0,0,0,.3)}
+[data-theme="dark"] .cell.sel{
+  background:linear-gradient(160deg,#3a4049 0%,var(--sel) 55%,#2b2f36 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),inset 0 -1.5px 0 rgba(0,0,0,.34)}
+[data-theme="dark"] .cell.bad{
+  background:linear-gradient(160deg,#48292a 0%,var(--bad-soft) 55%,#3a2224 100%)}
+/* 数字键盘 */
+[data-theme="dark"] .pad button{
+  background:linear-gradient(160deg,#22262e 0%,var(--paper2) 55%,#191c22 100%)}
+[data-theme="dark"] .pad button:active{
+  background:linear-gradient(160deg,#3a4049 0%,var(--sel) 60%,#2b2f36 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+[data-theme="dark"] .pad button.done{border-color:#262a32}
+[data-theme="dark"] .tools button:active{background:#262b33}
+[data-theme="dark"] .tools button.snd .sndTr{background:#343a44}
+[data-theme="dark"] .tools button.snd .sndTr::after{background:#e8e4dc;box-shadow:0 1px 2px rgba(0,0,0,.5)}
+[data-theme="dark"] .mask{background:rgba(21,23,28,.95)}
+/* 完成波纹：原版关键帧写死了浅绿 #cfe6c9，深夜下改用压暗的绿 */
+[data-theme="dark"] .cell.ripple{animation-name:ripple-dk}
+@keyframes ripple-dk{
+  0%{background:var(--paper2)}
+  35%{background:#214a37;transform:scale(1.14);color:var(--good)}
+  100%{background:var(--paper2);transform:scale(1)}
+}
+
+/* ===== 主题切换开关 ===== */
+.thm{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  flex:none;width:30px;height:30px;padding:0;cursor:pointer;
+  border:1px solid var(--thm-line,var(--line));border-radius:999px;
+  background:var(--thm-bg,var(--paper2));color:var(--thm-fg,var(--ink-soft,var(--ink)));
+  -webkit-tap-highlight-color:transparent;
+  transition:background .2s,border-color .2s,color .2s}
+.thm:hover{color:var(--thm-fg-on,var(--accent));border-color:var(--thm-line-on,var(--accent))}
+.thm:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.thm svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.thm .sun{transition:opacity .22s,transform .32s cubic-bezier(.3,.8,.3,1)}
+.thm .moon{position:absolute;transition:opacity .22s,transform .32s cubic-bezier(.3,.8,.3,1)}
+/* 浅色：显示月亮（点击去深色）；深色：显示太阳（点击回浅色） */
+.thm .sun{opacity:0;transform:rotate(-70deg) scale(.6)}
+.thm .moon{opacity:1;transform:none}
+[data-theme="dark"] .thm .sun{opacity:1;transform:none}
+[data-theme="dark"] .thm .moon{opacity:0;transform:rotate(70deg) scale(.6)}
+@media(prefers-reduced-motion:reduce){.thm,.thm svg,.thm .sun,.thm .moon{transition-duration:.01ms!important}}
+.tools button.thm{flex:0 0 auto;width:29px;min-width:29px;height:29px;padding:0;
+  background:var(--paper2);color:var(--ink-soft);border-color:var(--line);
+  display:inline-flex;align-items:center;justify-content:center}
+.tools button.thm:hover{color:var(--ink);border-color:var(--line)}
+.tools button.thm:active{background:var(--paper2)}
+
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden}
 body{
@@ -151,7 +222,12 @@ body{
   <div class="diffs" id="diffs" role="tablist" aria-label="难度选择"></div>
   <div class="bar">
     <span></span>
-    <div class="tools"><button id="btnNew">重开</button><button class="snd" id="sndBtn" role="switch" aria-label="音效开关" aria-checked="true"><span class="sndTx">音效</span><span class="sndTr"></span></button></div>
+    <div class="tools"><button id="btnNew">重开</button><button class="snd" id="sndBtn" role="switch" aria-label="音效开关" aria-checked="true"><span class="sndTx">音效</span><span class="sndTr"></span></button>
+    <button class="thm" id="thmBtn" type="button" aria-label="切换深色模式" title="切换深色模式">
+    <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1z"/></svg>
+    <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.1"/><path d="M12 2.6v2.3M12 19.1v2.3M4.4 4.4l1.7 1.7M17.9 17.9l1.7 1.7M2.6 12h2.3M19.1 12h2.3M4.4 19.6l1.7-1.7M17.9 6.1l1.7-1.7"/></svg>
+    </button>
+  </div>
   </div>
   <div class="board-box"><div class="grid" id="grid" role="grid" aria-label="数独棋盘"></div></div>
   <div class="pad" id="pad" aria-label="数字键盘"></div>
@@ -679,6 +755,29 @@ if(load()){render();}
 else newGame(TIERS[0]);
 window.addEventListener('beforeunload',save);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});
+</script>
+<script>
+/* 主题切换：仅在点击开关时切换，并记住选择 */
+(function(){
+  var k='hd-theme',root=document.documentElement,btn=document.getElementById('thmBtn');
+  var meta=document.querySelector('meta[name="theme-color"]');
+  var C={light:'#f4efe4',dark:'#15171c'};
+  function paint(v){
+    if(v==='dark')root.setAttribute('data-theme','dark');else root.removeAttribute('data-theme');
+    if(meta)meta.setAttribute('content',C[v]);
+    if(btn){
+      btn.setAttribute('aria-label',v==='dark'?'切换浅色模式':'切换深色模式');
+      btn.setAttribute('title',btn.getAttribute('aria-label'));
+    }
+  }
+  paint(root.getAttribute('data-theme')==='dark'?'dark':'light');
+  if(btn)btn.addEventListener('click',function(){
+    var v=root.getAttribute('data-theme')==='dark'?'light':'dark';
+    try{localStorage.setItem(k,v)}catch(e){}
+    paint(v);
+    try{document.dispatchEvent(new Event('hd-theme'))}catch(e){}
+  });
+})();
 </script>
 </body>
 </html>
